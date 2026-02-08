@@ -522,7 +522,7 @@
             app.innerHTML = `
                 <!-- Header Bar -->
                 <div class="bg-white px-4 py-3 shadow-sm flex justify-between items-center sticky top-0 z-20">
-                    <button onclick="exitGame()" class="p-2 -ml-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100">
+                    <button onclick="confirmExitGame()" class="p-2 -ml-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100">
                         <i data-lucide="x" class="w-5 h-5"></i>
                     </button>
                     <div class="flex items-center gap-4 font-bold font-mono">
@@ -831,6 +831,12 @@
         function exitGame() {
             if (state.game.timerInterval) clearInterval(state.game.timerInterval);
             goMenu();
+        }
+
+        function confirmExitGame() {
+            if (confirm('ゲームを中断してホームに戻りますか？')) {
+                exitGame();
+            }
         }
 
         // Initialize
