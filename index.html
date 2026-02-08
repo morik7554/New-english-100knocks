@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ENGLISH KNOCK v3</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: M PLUS Rounded 1c -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        body {
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            user-select: none; /* Prevent text selection */
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+
+        @keyframes scaleIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .animate-scaleIn {
+            animation: scaleIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        
+        @keyframes pulse-count {
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 0; }
+        }
+        .animate-count {
+            animation: pulse-count 0.8s ease-out forwards;
+        }
+
+        @keyframes spin-slow {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin-slow {
+            animation: spin-slow 20s linear infinite;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-indigo-50 text-slate-800 min-h-screen flex justify-center items-center p-4 md:p-6">
+
+    <!-- App Container -->
+    <div id="app" class="w-full max-w-md bg-white shadow-2xl rounded-3xl overflow-hidden min-h-[600px] flex flex-col relative border border-indigo-100">
+        <!-- Content will be injected here by JavaScript -->
+    </div>
+
+    <script>
+        /**
+         * ------------------------------------------------------------------
+         * DATA: Content & Configuration
+         * ------------------------------------------------------------------
+         */
+        const ENGLISH_KNOCK_CONTENT = [
+            {
+                id: 'g1_be',
+                grade: '中学1年',
+                category: 'be動詞',
+                description: 'am, is, are の使い分け',
+                questions: [
+                    { text: "I am a student.", chunks: ["I", "am", "a", "student."] },
+                    { text: "You are my friend.", chunks: ["You", "are", "my", "friend."] },
+                    { text: "He is a teacher.", chunks: ["He", "is", "a", "teacher."] },
+                    { text: "She is very kind.", chunks: ["She", "is", "very", "kind."] },
+                    { text: "We are from Japan.", chunks: ["We", "are", "from", "Japan."] },
+                    { text: "Are you busy now?", chunks: ["Are", "you", "busy", "now?"] },
+                    { text: "This is not my pen.", chunks: ["This", "is", "not", "my", "pen."] },
+                    { text: "They are in the park.", chunks: ["They", "are", "in", "the", "park."] },
+                ]
+            },
+            {
+                id: 'g2_comp',
+                grade: '中学2年',
+                category: '比較級・最上級',
+                description: 'er, est, more, most の活用',
+                questions: [
+                    { text: "This box is bigger than that one.", chunks: ["This", "box", "is", "bigger", "than", "that", "one."] },
+                    { text: "He runs faster than me.", chunks: ["He", "runs", "faster", "than", "me."] },
+                    { text: "English is more interesting than math.", chunks: ["English", "is", "more", "interesting", "than", "math."] },
+                    { text: "Mount Fuji is the highest mountain in Japan.", chunks: ["Mount", "Fuji", "is", "the", "highest", "mountain", "in", "Japan."] },
+                    { text: "She is the best singer in our class.", chunks: ["She", "is", "the", "best", "singer", "in", "our", "class."] },
+                    { text: "Which is older, this temple or that shrine?", chunks: ["Which", "is", "older,", "this", "temple", "or", "that", "shrine?"] },
+                ]
+            },
+            {
+                id: 'g3_perfect',
+                grade: '中学3年',
+                category: '現在完了',
+                description: 'have + 過去分詞 (経験・完了・継続)',
+                questions: [
+                    { text: "I have finished my homework.", chunks: ["I", "have", "finished", "my", "homework."] },
+                    { text: "Have you ever been to Kyoto?", chunks: ["Have", "you", "ever", "been", "to", "Kyoto?"] },
+                    { text: "She has lived here for ten years.", chunks: ["She", "has", "lived", "here", "for", "ten", "years."] },
+                    { text: "I have never seen such a big dog.", chunks: ["I", "have", "never", "seen", "such", "a", "big", "dog."] },
+                    { text: "Tom has just arrived at the station.", chunks: ["Tom", "has", "just", "arrived", "at", "the", "station."] },
+                    { text: "How long have you known him?", chunks: ["How", "long", "have", "you", "known", "him?"] },
+                ]
+            }
+        ];
+
+        const RANKS = [
+            { min: 0, title: '練習生', icon: '🌱', color: 'text-green-500' },
+            { min: 500, title: '初心者', icon: '🐣', color: 'text-yellow-500' },
+            { min: 1500, title: 'ルーキー', icon: '🥉', color: 'text-orange-500' },
+            { min: 3000, title: '熟練者', icon: '🥈', color: 'text-slate-400' },
+            { min: 5000, title: 'エース', icon: '🥇', color: 'text-yellow-400' },
+            { min: 10000, title: '神様', icon: '☀️', color: 'text-rose-500' },
+        ];
+
+        /**
+         * ------------------------------------------------------------------
+         * STATE MANAGEMENT
+         * ------------------------------------------------------------------
+         */
+        const state = {
+            view: 'start', // start, menu, grade_select, course_select, countdown, history, game, result
+            selectedGrade: null,
+            userData: { nickname: '', totalScore: 0, history: [], bestScores: {} },
+            game: {
+                activeCourseId: null,
+                timeLeft: 60,
+                score: 0,
+                combo: 0,
+                maxCombo: 0,
+                questionQueue: [],
+                currentQ: null,
+                shuffledChunks: [],
+                selectedIndices: [],
+                isCorrect: null, // null, true, false
+                startTime: 0,
+                timerInterval: null
+            }
+        };
+
+        // Load data from localStorage
+        const savedData = localStorage.getItem('english_knock_v3_data');
+        if (savedData) {
+            state.userData = { ...state.userData, ...JSON.parse(savedData) };
+        }
+
+        /**
+         * ------------------------------------------------------------------
+         * CORE LOGIC
+         * ------------------------------------------------------------------
+         */
+        
+        // Helper: TTS
+        function speakText(text) {
+            if (!('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'en-US';
+            utterance.rate = 1.0;
+            const voices = window.speechSynthesis.getVoices();
+            const preferredVoice = voices.find(v => 
+                (v.name.includes('Google') && v.lang.includes('en-US')) || 
+                (v.name.includes('Natural') && v.lang.includes('en-US')) ||
+                v.lang === 'en-US'
+            );
+            if (preferredVoice) utterance.voice = preferredVoice;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // Helper: Simple Beep Sound
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playTone(freq = 440, type = 'sine', duration = 0.1) {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            
+            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        // Helper: Save Data
+        function saveData() {
+            localStorage.setItem('english_knock_v3_data', JSON.stringify(state.userData));
+        }
+
+        // Helper: Get Rank
+        function getCurrentRank() {
+            const score = state.userData.totalScore;
+            return [...RANKS].reverse().find(r => score >= r.min) || RANKS[0];
+        }
+
+        /**
+         * ------------------------------------------------------------------
+         * RENDER FUNCTIONS
+         * ------------------------------------------------------------------
+         */
+        const app = document.getElementById('app');
+
+        function render() {
+            app.innerHTML = ''; // Clear container
+            
+            // View Routing
+            switch(state.view) {
+                case 'start': renderStart(); break;
+                case 'menu': renderMenu(); break;
+                case 'grade_select': renderGradeSelect(); break;
+                case 'course_select': renderCourseSelect(); break;
+                case 'countdown': renderCountdown(); break;
+                case 'history': renderHistory(); break;
+                case 'game': renderGame(); break;
+                case 'result': renderResult(); break;
+                default: renderStart();
+            }
+
+            // Initialize Icons
+            lucide.createIcons();
+        }
+
+        function renderStart() {
+            const val = state.userData.nickname || '';
+            app.innerHTML = `
+                <div class="flex-1 flex flex-col items-center justify-center p-8 bg-indigo-600 text-white relative h-full">
+                    <div class="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none overflow-hidden">
+                        <i data-lucide="graduation-cap" class="absolute top-10 right-10 w-40 h-40 transform rotate-12"></i>
+                        <i data-lucide="zap" class="absolute bottom-10 left-10 w-32 h-32 transform -rotate-12"></i>
+                    </div>
+
+                    <div class="z-10 w-full max-w-xs text-center animate-fadeIn">
+                        <h1 class="text-3xl font-extrabold tracking-tight mb-2">ENGLISH KNOCK</h1>
+                        <p class="text-indigo-200 text-sm font-bold opacity-80 mb-8">v3.0</p>
+                        
+                        <div class="bg-white/10 backdrop-blur-md p-6 rounded-2xl shadow-xl border border-white/20">
+                            <label class="block text-indigo-100 text-sm font-bold mb-2 text-left" for="nickname">
+                                ニックネームを入力
+                            </label>
+                            <input 
+                                type="text" 
+                                id="nickname" 
+                                value="${val}"
+                                placeholder="Player Name"
+                                class="w-full px-4 py-3 rounded-xl text-slate-800 font-bold mb-4 focus:outline-none focus:ring-4 focus:ring-indigo-400"
+                            >
+                            <button 
+                                onclick="handleNicknameSubmit()"
+                                class="w-full bg-yellow-400 text-yellow-900 font-bold py-3 rounded-xl shadow-lg hover:bg-yellow-300 transform transition-all active:scale-95 flex items-center justify-center gap-2"
+                            >
+                                START
+                                <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderMenu() {
+            const rank = getCurrentRank();
+            app.innerHTML = `
+                <div class="flex-1 flex flex-col p-6 bg-indigo-50">
+                    <!-- User Header -->
+                    <div class="flex justify-between items-center mb-8 bg-white p-4 rounded-2xl shadow-sm border border-indigo-100">
+                        <div>
+                            <div class="text-xs text-slate-400 font-bold">Welcome</div>
+                            <div class="text-xl font-black text-slate-700">${state.userData.nickname}</div>
+                        </div>
+                        <div class="bg-indigo-50 px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1 text-indigo-600">
+                            <span class="text-lg">${rank.icon}</span>
+                            <span>${rank.title}</span>
+                        </div>
+                    </div>
+
+                    <!-- Main Actions -->
+                    <div class="space-y-4 flex-1 flex flex-col justify-center">
+                        <button onclick="state.view = 'grade_select'; render();" class="w-full bg-indigo-600 text-white p-6 rounded-3xl shadow-lg hover:bg-indigo-700 transition-all group relative overflow-hidden text-left h-40 flex flex-col justify-between">
+                            <div class="relative z-10">
+                                <div class="text-indigo-200 font-bold text-sm mb-1">LET'S START</div>
+                                <div class="text-3xl font-extrabold flex items-center gap-2">
+                                    トレーニング
+                                    <i data-lucide="chevron-right" class="w-6 h-6 group-hover:translate-x-1 transition-transform"></i>
+                                </div>
+                            </div>
+                            <div class="relative z-10 opacity-80 text-sm">文法を選んでノック開始</div>
+                            <i data-lucide="dumbbell" class="absolute -bottom-4 -right-4 w-32 h-32 text-indigo-500 opacity-30 transform rotate-12 group-hover:scale-110 transition-transform duration-500"></i>
+                        </button>
+
+                        <button onclick="state.view = 'history'; render();" class="w-full bg-white text-slate-700 p-6 rounded-3xl shadow-md border-2 border-indigo-100 hover:border-indigo-300 transition-all group relative overflow-hidden text-left h-32 flex flex-col justify-between">
+                            <div class="relative z-10">
+                                <div class="text-slate-400 font-bold text-sm mb-1">YOUR RECORDS</div>
+                                <div class="text-2xl font-extrabold flex items-center gap-2">
+                                    学習履歴
+                                    <i data-lucide="chevron-right" class="w-5 h-5 group-hover:translate-x-1 transition-transform"></i>
+                                </div>
+                            </div>
+                            <i data-lucide="bar-chart-3" class="absolute -bottom-4 -right-4 w-24 h-24 text-slate-200 opacity-50 transform rotate-12 group-hover:scale-110 transition-transform duration-500"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="mt-8 text-center">
+                        <button onclick="state.view = 'start'; render();" class="text-slate-400 text-sm hover:text-indigo-500 underline">ニックネームを変更</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderGradeSelect() {
+            const grades = [...new Set(ENGLISH_KNOCK_CONTENT.map(c => c.grade))];
+            const gradeButtons = grades.map(grade => `
+                <button onclick="selectGrade('${grade}')" class="w-full bg-white p-5 rounded-2xl shadow-sm border-2 border-slate-100 hover:border-indigo-400 hover:shadow-md transition-all text-left group">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xl font-bold text-slate-700">${grade}</span>
+                        <div class="w-8 h-8 rounded-full bg-indigo-50 text-indigo-500 flex items-center justify-center group-hover:bg-indigo-500 group-hover:text-white transition-colors">
+                            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                </button>
+            `).join('');
+
+            app.innerHTML = `
+                <div class="flex-1 flex flex-col bg-indigo-50">
+                    <div class="bg-indigo-600 p-6 pt-8 pb-10 rounded-b-[2rem] shadow-lg mb-6 relative">
+                        <button onclick="goMenu()" class="absolute top-6 left-4 text-indigo-100 hover:text-white bg-indigo-700/50 p-2 rounded-full">
+                            <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                        </button>
+                        <div class="text-center">
+                            <h2 class="text-2xl font-bold text-white">学年を選択</h2>
+                            <p class="text-indigo-200 text-sm mt-1">挑戦するレベルを選んでください</p>
+                        </div>
+                    </div>
+                    <div class="flex-1 px-6 space-y-3 overflow-y-auto pb-8">
+                        ${gradeButtons}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCourseSelect() {
+            const courses = ENGLISH_KNOCK_CONTENT.filter(c => c.grade === state.selectedGrade);
+            const coursesHtml = courses.map(course => {
+                const best = state.userData.bestScores[course.id] || 0;
+                return `
+                <button onclick="prepareGame('${course.id}')" class="w-full bg-white border-2 border-slate-100 hover:border-indigo-400 hover:shadow-md transition-all p-4 rounded-2xl flex items-center justify-between group text-left relative overflow-hidden mb-3">
+                    <div class="relative z-10">
+                        <div class="font-bold text-slate-800 text-lg">${course.category}</div>
+                        <div class="text-xs text-slate-400">${course.description}</div>
+                    </div>
+                    <div class="flex flex-col items-end gap-1 relative z-10">
+                        ${best > 0 ? `
+                        <div class="text-xs font-bold text-orange-500 flex items-center gap-1 bg-orange-50 px-2 py-0.5 rounded-full">
+                            <i data-lucide="trophy" class="w-3 h-3"></i>
+                            ${best}
+                        </div>` : ''}
+                        <div class="w-8 h-8 rounded-full bg-indigo-50 text-indigo-500 flex items-center justify-center group-hover:bg-indigo-500 group-hover:text-white transition-colors">
+                            <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+                        </div>
+                    </div>
+                    <div class="absolute -bottom-4 -right-4 w-16 h-16 bg-indigo-50 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
+                </button>`;
+            }).join('');
+
+            app.innerHTML = `
+                <div class="flex-1 flex flex-col bg-indigo-50">
+                    <div class="bg-indigo-600 p-6 pt-8 pb-10 rounded-b-[2rem] shadow-lg mb-6 relative">
+                        <button onclick="state.view = 'grade_select'; render();" class="absolute top-6 left-4 text-indigo-100 hover:text-white bg-indigo-700/50 p-2 rounded-full">
+                            <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                        </button>
+                        <div class="text-center">
+                            <div class="text-indigo-300 text-xs font-bold uppercase tracking-wider mb-1">${state.selectedGrade}</div>
+                            <h2 class="text-2xl font-bold text-white">文法項目を選択</h2>
+                        </div>
+                    </div>
+                    <div class="flex-1 px-6 overflow-y-auto pb-8">
+                        ${coursesHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCountdown() {
+            app.innerHTML = `
+                <div class="flex-1 flex flex-col items-center justify-center bg-indigo-600 text-white">
+                     <div id="countdown-display" class="text-9xl font-black animate-count text-yellow-300 drop-shadow-lg">3</div>
+                     <div class="mt-8 text-indigo-200 font-bold tracking-widest text-xl">GET READY</div>
+                </div>
+            `;
+        }
+
+        function renderHistory() {
+            const totalScore = state.userData.totalScore;
+            const totalHighScore = Object.values(state.userData.bestScores).reduce((a, b) => a + b, 0);
+            const playCount = state.userData.history.length;
+            
+            const scoreListHtml = ENGLISH_KNOCK_CONTENT.map(course => {
+                const score = state.userData.bestScores[course.id] || 0;
+                return `
+                <div class="bg-white p-3 rounded-xl border border-slate-100 flex justify-between items-center">
+                    <div>
+                        <div class="text-xs text-indigo-500 font-bold">${course.grade}</div>
+                        <div class="font-bold text-slate-700 text-sm">${course.category}</div>
+                    </div>
+                    <div class="text-right">
+                        ${score > 0 ? `
+                            <div class="font-bold text-indigo-600">${score.toLocaleString()} pt</div>
+                        ` : `
+                            <div class="text-xs text-slate-300 font-medium">未プレイ</div>
+                        `}
+                    </div>
+                </div>`;
+            }).join('');
+
+            app.innerHTML = `
+                <div class="flex-1 flex flex-col bg-slate-50">
+                    <div class="bg-white p-4 shadow-sm sticky top-0 z-20 flex items-center">
+                        <button onclick="goMenu()" class="p-2 -ml-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 mr-2">
+                            <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                        </button>
+                        <h2 class="font-bold text-lg text-slate-700">学習レポート</h2>
+                    </div>
+
+                    <div class="p-6 overflow-y-auto pb-10">
+                        <div class="grid grid-cols-2 gap-3 mb-6">
+                            <div class="bg-indigo-600 text-white p-4 rounded-2xl shadow-md col-span-2">
+                                <div class="text-xs text-indigo-200 mb-1">累計獲得スコア</div>
+                                <div class="text-3xl font-black">${totalScore.toLocaleString()}</div>
+                            </div>
+                            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+                                <div class="text-xs text-slate-400 mb-1">ハイスコア合計</div>
+                                <div class="text-xl font-bold text-slate-700">${totalHighScore.toLocaleString()}</div>
+                            </div>
+                            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+                                <div class="text-xs text-slate-400 mb-1">総プレイ回数</div>
+                                <div class="text-xl font-bold text-slate-700">${playCount}回</div>
+                            </div>
+                        </div>
+
+                        <h3 class="font-bold text-slate-600 mb-3 flex items-center gap-2 text-sm">
+                            <i data-lucide="trophy" class="w-4 h-4 text-yellow-500"></i>
+                            項目別ハイスコア
+                        </h3>
+                        <div class="space-y-2">
+                            ${scoreListHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderGame() {
+            const { timeLeft, score, combo, selectedIndices, shuffledChunks, isCorrect } = state.game;
+
+            let answerBoxClass = 'border-indigo-100';
+            if (isCorrect === true) answerBoxClass = 'border-green-400 bg-green-50';
+            if (isCorrect === false) answerBoxClass = 'border-red-400 bg-red-50';
+
+            // Answer Content with Click Handler (Cancel Feature)
+            let answerContent = '';
+            if (selectedIndices.length === 0) {
+                answerContent = `<span class="text-slate-300 w-full text-center text-sm font-bold">単語をタップして並び替え</span>`;
+            } else {
+                answerContent = selectedIndices.map((idx, answerOrder) => `
+                    <button onclick="handleAnswerClick(${answerOrder})" class="animate-fadeIn px-3 py-1.5 bg-indigo-600 text-white rounded-lg font-bold shadow-sm text-lg hover:bg-red-500 transition-colors">
+                        ${shuffledChunks[idx].text}
+                    </button>
+                `).join('');
+            }
+
+            const choicesHtml = shuffledChunks.map((chunk, i) => {
+                const isSelected = selectedIndices.includes(i);
+                const btnClass = isSelected 
+                    ? 'opacity-0 pointer-events-none transform scale-90' 
+                    : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50';
+                
+                return `
+                <button
+                    onclick="handleChunkClick(${i})"
+                    ${isSelected ? 'disabled' : ''}
+                    class="px-4 py-3 rounded-xl text-lg font-bold shadow-sm border-b-4 transition-all active:border-b-0 active:translate-y-1 ${btnClass}"
+                >
+                    ${chunk.text}
+                </button>`;
+            }).join('');
+
+            app.innerHTML = `
+                <!-- Header Bar -->
+                <div class="bg-white px-4 py-3 shadow-sm flex justify-between items-center sticky top-0 z-20">
+                    <button onclick="exitGame()" class="p-2 -ml-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                    <div class="flex items-center gap-4 font-bold font-mono">
+                        <div class="flex items-center gap-1.5 ${timeLeft < 10 ? 'text-red-500 animate-pulse' : 'text-slate-600'}">
+                            <i data-lucide="timer" class="w-4 h-4"></i>
+                            <span id="timer-display" class="text-xl">${timeLeft}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 text-indigo-600">
+                            <i data-lucide="trophy" class="w-4 h-4"></i>
+                            <span class="text-xl">${score}</span>
+                        </div>
+                    </div>
+                    <div class="w-8"></div>
+                </div>
+
+                <!-- Main Game Area -->
+                <div class="flex-1 flex flex-col bg-slate-50">
+                    <!-- Combo -->
+                    <div class="h-10 flex justify-center items-end pb-2">
+                        ${combo > 1 ? `
+                        <div class="animate-bounce text-orange-500 font-black text-sm flex items-center gap-1">
+                            <i data-lucide="zap" class="w-4 h-4 fill-current"></i>
+                            ${combo} COMBO!
+                        </div>` : ''}
+                    </div>
+
+                    <!-- Answer Area -->
+                    <div class="px-4 mb-4">
+                        <div class="min-h-[120px] bg-white rounded-2xl border-2 flex flex-wrap content-start items-center p-4 gap-2 transition-colors duration-300 ${answerBoxClass}">
+                            ${answerContent}
+                        </div>
+                    </div>
+
+                    <!-- Choices Area -->
+                    <div class="flex-1 px-4 content-start pb-8">
+                        <div class="flex flex-wrap gap-3 justify-center">
+                            ${choicesHtml}
+                        </div>
+                    </div>
+
+                    <!-- Controls -->
+                    <div class="p-4 flex justify-center pb-8">
+                        <button 
+                            onclick="handleUndo()"
+                            ${selectedIndices.length === 0 ? 'disabled style="opacity:0.3"' : ''}
+                            class="flex items-center gap-2 px-6 py-3 rounded-full font-bold text-slate-500 hover:bg-slate-200 transition-colors"
+                        >
+                            <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+                            1つ戻す
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderResult() {
+            const { score, maxCombo } = state.game;
+            const rank = getCurrentRank(); 
+
+            app.innerHTML = `
+                <div class="flex-1 flex flex-col items-center justify-center p-6 bg-indigo-600 text-white text-center relative overflow-hidden h-full">
+                    <div class="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+                         <i data-lucide="star" class="absolute top-10 left-10 w-24 h-24 animate-spin-slow"></i>
+                         <i data-lucide="star" class="absolute bottom-20 right-10 w-32 h-32 animate-spin-slow" style="animation-duration: 10s"></i>
+                    </div>
+
+                    <div class="z-10 animate-scaleIn w-full">
+                        <div class="text-indigo-200 font-bold mb-2 tracking-widest text-sm uppercase">Session Complete</div>
+                        <h2 class="text-6xl font-black mb-1 drop-shadow-md">${score}</h2>
+                        <div class="text-xl font-bold mb-8 opacity-90">POINTS</div>
+
+                        <div class="flex gap-4 mb-10 justify-center">
+                            <div class="bg-white/10 backdrop-blur px-4 py-3 rounded-2xl min-w-[100px]">
+                                <div class="text-xs text-indigo-200 mb-1">MAX COMBO</div>
+                                <div class="text-2xl font-bold text-yellow-300">${maxCombo}</div>
+                            </div>
+                            <div class="bg-white/10 backdrop-blur px-4 py-3 rounded-2xl min-w-[100px]">
+                                <div class="text-xs text-indigo-200 mb-1">TOTAL RANK</div>
+                                <div class="text-2xl font-bold">
+                                    ${rank.icon}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3 w-full max-w-xs mx-auto">
+                            <button 
+                                onclick="prepareGame('${state.game.activeCourseId}')"
+                                class="w-full bg-white text-indigo-600 font-bold py-4 rounded-xl shadow-lg hover:bg-indigo-50 hover:scale-105 transition-all flex items-center justify-center gap-2"
+                            >
+                                <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+                                もう一度挑戦
+                            </button>
+                            <button 
+                                onclick="goMenu()"
+                                class="w-full bg-indigo-700 text-white font-bold py-4 rounded-xl border border-indigo-500 hover:bg-indigo-800 transition-all flex items-center justify-center gap-2"
+                            >
+                                <i data-lucide="menu" class="w-5 h-5"></i>
+                                メニューへ戻る
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        /**
+         * ------------------------------------------------------------------
+         * LOGIC HANDLERS
+         * ------------------------------------------------------------------
+         */
+
+        function handleNicknameSubmit() {
+            const input = document.getElementById('nickname');
+            const name = input.value.trim() || 'Player';
+            state.userData.nickname = name;
+            saveData();
+            goMenu();
+        }
+
+        function goMenu() {
+            state.view = 'menu';
+            render();
+        }
+
+        function selectGrade(grade) {
+            state.selectedGrade = grade;
+            state.view = 'course_select';
+            render();
+        }
+        
+        // Prepare Game: Setup state -> Countdown -> Start
+        function prepareGame(courseId) {
+            const course = ENGLISH_KNOCK_CONTENT.find(c => c.id === courseId);
+            if (!course) return;
+
+            // Initialize State
+            state.game = {
+                activeCourseId: courseId,
+                timeLeft: 60,
+                score: 0,
+                combo: 0,
+                maxCombo: 0,
+                questionQueue: [...course.questions].sort(() => Math.random() - 0.5),
+                currentQ: null,
+                shuffledChunks: [],
+                selectedIndices: [],
+                isCorrect: null,
+                startTime: 0, // Set when actual game starts
+                timerInterval: null
+            };
+
+            // Start Countdown
+            state.view = 'countdown';
+            render();
+
+            let count = 3;
+            playTone(800, 'sine', 0.1); // Beep
+            
+            const countInterval = setInterval(() => {
+                count--;
+                const el = document.getElementById('countdown-display');
+                if (count > 0) {
+                    if (el) {
+                        el.innerText = count;
+                        // Trigger reflow for animation restart
+                        el.classList.remove('animate-count');
+                        void el.offsetWidth;
+                        el.classList.add('animate-count');
+                    }
+                    playTone(800, 'sine', 0.1); // Beep
+                } else {
+                    clearInterval(countInterval);
+                    if (el) el.innerText = "GO!";
+                    playTone(1200, 'triangle', 0.3); // High Beep
+                    setTimeout(() => startGameLogic(), 500);
+                }
+            }, 1000);
+        }
+
+        function startGameLogic() {
+            state.view = 'game';
+            state.game.startTime = Date.now();
+            loadQuestion(state.game.questionQueue[0]);
+
+            // Start Timer (No Full Re-render)
+            state.game.timerInterval = setInterval(() => {
+                if (state.game.timeLeft <= 1) {
+                    finishSession();
+                } else {
+                    state.game.timeLeft--;
+                    // Direct DOM update to prevent flickering
+                    const timerEl = document.getElementById('timer-display');
+                    if (timerEl) {
+                        timerEl.innerText = state.game.timeLeft;
+                    }
+                }
+            }, 1000);
+
+            render();
+        }
+
+        function loadQuestion(q) {
+            state.game.currentQ = q;
+            state.game.shuffledChunks = q.chunks
+                .map((text, i) => ({ id: `${i}-${text}`, text }))
+                .sort(() => Math.random() - 0.5);
+            state.game.selectedIndices = [];
+            state.game.isCorrect = null;
+            state.game.startTime = Date.now(); // Reset time for each question speed bonus
+            renderGame();
+        }
+
+        function handleChunkClick(index) {
+            if (state.game.isCorrect !== null) return;
+            if (state.game.selectedIndices.includes(index)) return;
+
+            state.game.selectedIndices.push(index);
+            
+            if (state.game.selectedIndices.length === state.game.currentQ.chunks.length) {
+                checkAnswer();
+            } else {
+                renderGame();
+            }
+        }
+
+        // New Feature: Cancel clicked answer
+        function handleAnswerClick(answerOrderIndex) {
+            if (state.game.isCorrect !== null) return;
+            // Remove the clicked item from selectedIndices
+            // splice changes the array in place
+            state.game.selectedIndices.splice(answerOrderIndex, 1);
+            renderGame();
+        }
+
+        function handleUndo() {
+            if (state.game.isCorrect !== null) return;
+            state.game.selectedIndices.pop();
+            renderGame();
+        }
+
+        function checkAnswer() {
+            const userSentence = state.game.selectedIndices.map(i => state.game.shuffledChunks[i].text).join('');
+            const correctSentence = state.game.currentQ.chunks.join('');
+            const elapsed = (Date.now() - state.game.startTime) / 1000;
+
+            if (userSentence === correctSentence) {
+                state.game.isCorrect = true;
+                speakText(state.game.currentQ.text);
+
+                const timeBonus = Math.max(10, Math.floor(150 - (elapsed * 5)));
+                const comboBonus = Math.min(50, state.game.combo * 10);
+                state.game.score += (timeBonus + comboBonus);
+                state.game.combo++;
+                if (state.game.combo > state.game.maxCombo) state.game.maxCombo = state.game.combo;
+
+                renderGame();
+
+                // BUG FIX: Ensure game is still active before loading next
+                setTimeout(() => {
+                    if (state.view !== 'game') return; // Exit if game finished
+
+                    const nextIdx = (state.game.questionQueue.indexOf(state.game.currentQ) + 1) % state.game.questionQueue.length;
+                    loadQuestion(state.game.questionQueue[nextIdx]);
+                }, 700); // SPEED UP: 1500 -> 700
+
+            } else {
+                state.game.isCorrect = false;
+                state.game.combo = 0;
+                renderGame();
+
+                setTimeout(() => {
+                    if (state.view !== 'game') return; // Exit if game finished
+                    state.game.selectedIndices = [];
+                    state.game.isCorrect = null;
+                    renderGame();
+                }, 800);
+            }
+        }
+
+        function finishSession() {
+            if (state.game.timerInterval) clearInterval(state.game.timerInterval);
+            state.game.timerInterval = null; // Clear ref
+            
+            state.userData.totalScore += state.game.score;
+            const currentBest = state.userData.bestScores[state.game.activeCourseId] || 0;
+            state.userData.bestScores[state.game.activeCourseId] = Math.max(currentBest, state.game.score);
+            
+            state.userData.history.unshift({
+                date: new Date().toISOString(),
+                courseId: state.game.activeCourseId,
+                score: state.game.score,
+                maxCombo: state.game.maxCombo
+            });
+            if (state.userData.history.length > 50) state.userData.history.pop();
+            
+            saveData();
+            
+            state.view = 'result';
+            render();
+        }
+
+        function retryGame() {
+            prepareGame(state.game.activeCourseId); // Use prepareGame for countdown
+        }
+
+        function exitGame() {
+            if (state.game.timerInterval) clearInterval(state.game.timerInterval);
+            goMenu();
+        }
+
+        // Initialize
+        render();
+
+    </script>
+</body>
+</html>
