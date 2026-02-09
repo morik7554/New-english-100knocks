@@ -71,12 +71,46 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
         }
+
+        .app-root {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            flex-shrink: 0;
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .report-root {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .report-header,
+        .report-summary,
+        .grade-selector {
+            flex-shrink: 0;
+        }
+
+        .grammar-list {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
     </style>
 </head>
 <body class="bg-indigo-50 text-slate-800 min-h-screen flex justify-center items-center p-4 md:p-6">
 
     <!-- App Container -->
-    <div id="app" class="w-full max-w-md bg-white shadow-2xl rounded-3xl overflow-hidden min-h-[600px] flex flex-col relative border border-indigo-100">
+    <div id="app" class="app-root w-full max-w-md bg-white shadow-2xl rounded-3xl overflow-hidden min-h-[600px] flex flex-col relative border border-indigo-100">
         <!-- Content will be injected here by JavaScript -->
     </div>
 
@@ -93,14 +127,14 @@
                 category: 'be動詞',
                 description: 'am, is, are の使い分け',
                 questions: [
-                    { text: "I am a student.", chunks: ["I", "am", "a", "student."] },
-                    { text: "You are my friend.", chunks: ["You", "are", "my", "friend."] },
-                    { text: "He is a teacher.", chunks: ["He", "is", "a", "teacher."] },
-                    { text: "She is very kind.", chunks: ["She", "is", "very", "kind."] },
-                    { text: "We are from Japan.", chunks: ["We", "are", "from", "Japan."] },
-                    { text: "Are you busy now?", chunks: ["Are", "you", "busy", "now?"] },
-                    { text: "This is not my pen.", chunks: ["This", "is", "not", "my", "pen."] },
-                    { text: "They are in the park.", chunks: ["They", "are", "in", "the", "park."] },
+                    { text: "I am a student.", jp: "私は学生です。", chunks: ["I", "am", "a", "student."] },
+                    { text: "You are my friend.", jp: "あなたは私の友達です。", chunks: ["You", "are", "my", "friend."] },
+                    { text: "He is a teacher.", jp: "彼は先生です。", chunks: ["He", "is", "a", "teacher."] },
+                    { text: "She is very kind.", jp: "彼女はとても親切です。", chunks: ["She", "is", "very", "kind."] },
+                    { text: "We are from Japan.", jp: "私たちは日本出身です。", chunks: ["We", "are", "from", "Japan."] },
+                    { text: "Are you busy now?", jp: "今忙しいですか。", chunks: ["Are", "you", "busy", "now?"] },
+                    { text: "This is not my pen.", jp: "これは私のペンではありません。", chunks: ["This", "is", "not", "my", "pen."] },
+                    { text: "They are in the park.", jp: "彼らは公園にいます。", chunks: ["They", "are", "in", "the", "park."] },
                 ]
             },
             {
@@ -109,12 +143,12 @@
                 category: '比較級・最上級',
                 description: 'er, est, more, most の活用',
                 questions: [
-                    { text: "This box is bigger than that one.", chunks: ["This", "box", "is", "bigger", "than", "that", "one."] },
-                    { text: "He runs faster than me.", chunks: ["He", "runs", "faster", "than", "me."] },
-                    { text: "English is more interesting than math.", chunks: ["English", "is", "more", "interesting", "than", "math."] },
-                    { text: "Mount Fuji is the highest mountain in Japan.", chunks: ["Mount", "Fuji", "is", "the", "highest", "mountain", "in", "Japan."] },
-                    { text: "She is the best singer in our class.", chunks: ["She", "is", "the", "best", "singer", "in", "our", "class."] },
-                    { text: "Which is older, this temple or that shrine?", chunks: ["Which", "is", "older,", "this", "temple", "or", "that", "shrine?"] },
+                    { text: "This box is bigger than that one.", jp: "この箱はあの箱より大きいです。", chunks: ["This", "box", "is", "bigger", "than", "that", "one."] },
+                    { text: "He runs faster than me.", jp: "彼は私より速く走ります。", chunks: ["He", "runs", "faster", "than", "me."] },
+                    { text: "English is more interesting than math.", jp: "英語は数学より面白いです。", chunks: ["English", "is", "more", "interesting", "than", "math."] },
+                    { text: "Mount Fuji is the highest mountain in Japan.", jp: "富士山は日本で一番高い山です。", chunks: ["Mount", "Fuji", "is", "the", "highest", "mountain", "in", "Japan."] },
+                    { text: "She is the best singer in our class.", jp: "彼女は私たちのクラスで一番の歌手です。", chunks: ["She", "is", "the", "best", "singer", "in", "our", "class."] },
+                    { text: "Which is older, this temple or that shrine?", jp: "このお寺とあの神社ではどちらが古いですか。", chunks: ["Which", "is", "older,", "this", "temple", "or", "that", "shrine?"] },
                 ]
             },
             {
@@ -123,12 +157,418 @@
                 category: '現在完了',
                 description: 'have + 過去分詞 (経験・完了・継続)',
                 questions: [
-                    { text: "I have finished my homework.", chunks: ["I", "have", "finished", "my", "homework."] },
-                    { text: "Have you ever been to Kyoto?", chunks: ["Have", "you", "ever", "been", "to", "Kyoto?"] },
-                    { text: "She has lived here for ten years.", chunks: ["She", "has", "lived", "here", "for", "ten", "years."] },
-                    { text: "I have never seen such a big dog.", chunks: ["I", "have", "never", "seen", "such", "a", "big", "dog."] },
-                    { text: "Tom has just arrived at the station.", chunks: ["Tom", "has", "just", "arrived", "at", "the", "station."] },
-                    { text: "How long have you known him?", chunks: ["How", "long", "have", "you", "known", "him?"] },
+                    { text: "I have finished my homework.", jp: "私は宿題を終えました。", chunks: ["I", "have", "finished", "my", "homework."] },
+                    { text: "Have you ever been to Kyoto?", jp: "あなたは京都に行ったことがありますか。", chunks: ["Have", "you", "ever", "been", "to", "Kyoto?"] },
+                    { text: "She has lived here for ten years.", jp: "彼女はここに10年間住んでいます。", chunks: ["She", "has", "lived", "here", "for", "ten", "years."] },
+                    { text: "I have never seen such a big dog.", jp: "私はこんなに大きな犬を見たことがありません。", chunks: ["I", "have", "never", "seen", "such", "a", "big", "dog."] },
+                    { text: "Tom has just arrived at the station.", jp: "トムはちょうど駅に着いたところです。", chunks: ["Tom", "has", "just", "arrived", "at", "the", "station."] },
+                    { text: "How long have you known him?", jp: "あなたは彼をどのくらい知っていますか。", chunks: ["How", "long", "have", "you", "known", "him?"] },
+                ]
+            },
+            {
+                id: 'g2_past',
+                grade: '中学2年',
+                category: '過去形（一般動詞）',
+                description: '肯定・否定・疑問（yesterday, last ~ など）',
+                questions: [
+                    { text: "I played soccer.", jp: "私はサッカーをしました。", chunks: ["I", "played", "soccer."] },
+                    { text: "He used this pen.", jp: "彼はこのペンを使いました。", chunks: ["He", "used", "this", "pen."] },
+                    { text: "She cooked lunch.", jp: "彼女は昼食を作りました。", chunks: ["She", "cooked", "lunch."] },
+                    { text: "We studied English.", jp: "私たちは英語を勉強しました。", chunks: ["We", "studied", "English."] },
+                    { text: "They washed the car.", jp: "彼らは車を洗いました。", chunks: ["They", "washed", "the", "car."] },
+                    { text: "I wanted a new bike.", jp: "私は新しい自転車がほしかった。", chunks: ["I", "wanted", "a", "new", "bike."] },
+                    { text: "He went to school.", jp: "彼は学校へ行きました。", chunks: ["He", "went", "to", "school."] },
+                    { text: "She came here.", jp: "彼女はここに来ました。", chunks: ["She", "came", "here."] },
+                    { text: "We had a good time.", jp: "私たちは楽しい時を過ごしました。", chunks: ["We", "had", "a", "good", "time."] },
+                    { text: "They made a cake.", jp: "彼らはケーキを作りました。", chunks: ["They", "made", "a", "cake."] },
+                    { text: "I saw a bird.", jp: "私は鳥を見ました。", chunks: ["I", "saw", "a", "bird."] },
+                    { text: "He bought a book.", jp: "彼は本を買いました。", chunks: ["He", "bought", "a", "book."] },
+                    { text: "She took a picture.", jp: "彼女は写真を撮りました。", chunks: ["She", "took", "a", "picture."] },
+                    { text: "I did not play tennis.", jp: "私はテニスをしませんでした。", chunks: ["I", "did", "not", "play", "tennis."] },
+                    { text: "You didn't watch TV.", jp: "あなたはテレビを見ませんでした。", chunks: ["You", "didn't", "watch", "TV."] },
+                    { text: "He didn't know the song.", jp: "彼はその歌を知りませんでした。", chunks: ["He", "didn't", "know", "the", "song."] },
+                    { text: "She didn't eat natto.", jp: "彼女は納豆を食べませんでした。", chunks: ["She", "didn't", "eat", "natto."] },
+                    { text: "Did you listen to music?", jp: "あなたは音楽を聴きましたか。", chunks: ["Did", "you", "listen", "to", "music?"] },
+                    { text: "Did he speak English?", jp: "彼は英語を話しましたか。", chunks: ["Did", "he", "speak", "English?"] },
+                    { text: "Did she live in Osaka?", jp: "彼女は大阪に住んでいましたか。", chunks: ["Did", "she", "live", "in", "Osaka?"] },
+                    { text: "Did they run in the park?", jp: "彼らは公園で走りましたか。", chunks: ["Did", "they", "run", "in", "the", "park?"] },
+                    { text: "Yes, I did.", jp: "はい、そうです。", chunks: ["Yes,", "I", "did."] },
+                    { text: "No, he didn't.", jp: "いいえ、ちがいます。", chunks: ["No,", "he", "didn't."] },
+                    { text: "What did you buy?", jp: "あなたは何を買いましたか。", chunks: ["What", "did", "you", "buy?"] },
+                    { text: "Where did he go?", jp: "彼はどこへ行きましたか。", chunks: ["Where", "did", "he", "go?"] },
+                    { text: "I played baseball yesterday.", jp: "私は昨日野球をしました。", chunks: ["I", "played", "baseball", "yesterday."] },
+                    { text: "He helped his mother yesterday.", jp: "彼は昨日、母を手伝いました。", chunks: ["He", "helped", "his", "mother", "yesterday."] },
+                    { text: "She practiced the piano last night.", jp: "彼女は昨夜ピアノを練習しました。", chunks: ["She", "practiced", "the", "piano", "last", "night."] },
+                    { text: "We enjoyed the movie last Sunday.", jp: "私たちはこの前の日曜日に映画を楽しみました。", chunks: ["We", "enjoyed", "the", "movie", "last", "Sunday."] },
+                    { text: "They visited Kyoto last week.", jp: "彼らは先週京都を訪れました。", chunks: ["They", "visited", "Kyoto", "last", "week."] },
+                    { text: "I got up early this morning.", jp: "私は今朝早く起きました。", chunks: ["I", "got", "up", "early", "this", "morning."] },
+                    { text: "He read the book last month.", jp: "彼は先月その本を読みました。", chunks: ["He", "read", "the", "book", "last", "month."] },
+                    { text: "She wrote a letter to him.", jp: "彼女は彼に手紙を書きました。", chunks: ["She", "wrote", "a", "letter", "to", "him."] },
+                    { text: "We swam in the sea yesterday.", jp: "私たちは昨日海で泳ぎました。", chunks: ["We", "swam", "in", "the", "sea", "yesterday."] },
+                    { text: "They left home at seven.", jp: "彼らは7時に家を出ました。", chunks: ["They", "left", "home", "at", "seven."] },
+                    { text: "I didn't study math last night.", jp: "私は昨夜、数学を勉強しませんでした。", chunks: ["I", "didn't", "study", "math", "last", "night."] },
+                    { text: "He didn't use the computer yesterday.", jp: "彼は昨日コンピュータを使いませんでした。", chunks: ["He", "didn't", "use", "the", "computer", "yesterday."] },
+                    { text: "She didn't come to school today.", jp: "彼女は今日学校に来ませんでした。", chunks: ["She", "didn't", "come", "to", "school", "today."] },
+                    { text: "We didn't play soccer after school.", jp: "私たちは放課後サッカーをしませんでした。", chunks: ["We", "didn't", "play", "soccer", "after", "school."] },
+                    { text: "They didn't have lunch there.", jp: "彼らはそこで昼食を食べませんでした。", chunks: ["They", "didn't", "have", "lunch", "there."] },
+                    { text: "Did you clean your room yesterday?", jp: "あなたは昨日部屋を掃除しましたか。", chunks: ["Did", "you", "clean", "your", "room", "yesterday?"] },
+                    { text: "Did he brush his teeth this morning?", jp: "彼は今朝歯を磨きましたか。", chunks: ["Did", "he", "brush", "his", "teeth", "this", "morning?"] },
+                    { text: "Did she walk to school yesterday?", jp: "彼女は昨日歩いて学校へ行きましたか。", chunks: ["Did", "she", "walk", "to", "school", "yesterday?"] },
+                    { text: "Did they meet him at the station?", jp: "彼らは駅で彼に会いましたか。", chunks: ["Did", "they", "meet", "him", "at", "the", "station?"] },
+                    { text: "Did you see the news on TV?", jp: "あなたはテレビでニュースを見ましたか。", chunks: ["Did", "you", "see", "the", "news", "on", "TV?"] },
+                    { text: "What did you do last weekend?", jp: "あなたは先週末何をしましたか。", chunks: ["What", "did", "you", "do", "last", "weekend?"] },
+                    { text: "When did he finish his homework?", jp: "彼はいつ宿題を終えましたか。", chunks: ["When", "did", "he", "finish", "his", "homework?"] },
+                    { text: "Where did she find the cat?", jp: "彼女はどこでその猫を見つけましたか。", chunks: ["Where", "did", "she", "find", "the", "cat?"] },
+                    { text: "Who did you see in the park?", jp: "あなたは公園で誰を見かけましたか。", chunks: ["Who", "did", "you", "see", "in", "the", "park?"] },
+                    { text: "How did they come to Japan?", jp: "彼らはどうやって日本に来ましたか。", chunks: ["How", "did", "they", "come", "to", "Japan?"] },
+                ]
+            },
+            {
+                id: 'g2_be_past',
+                grade: '中学2年',
+                category: 'be動詞（過去形）',
+                description: 'was / were（肯定・否定・疑問）',
+                questions: [
+                    { text: "I was busy.", jp: "私は忙しかった。", chunks: ["I", "was", "busy."] },
+                    { text: "He was happy.", jp: "彼は幸せでした。", chunks: ["He", "was", "happy."] },
+                    { text: "She was a teacher.", jp: "彼女は先生でした。", chunks: ["She", "was", "a", "teacher."] },
+                    { text: "It was hot.", jp: "暑かったです。", chunks: ["It", "was", "hot."] },
+                    { text: "I was in Tokyo.", jp: "私は東京にいました。", chunks: ["I", "was", "in", "Tokyo."] },
+                    { text: "Ken was sick.", jp: "ケンは病気でした。", chunks: ["Ken", "was", "sick."] },
+                    { text: "That was my bag.", jp: "あれは私のかばんでした。", chunks: ["That", "was", "my", "bag."] },
+                    { text: "The dog was cute.", jp: "その犬はかわいかった。", chunks: ["The", "dog", "was", "cute."] },
+                    { text: "This was easy.", jp: "これは簡単でした。", chunks: ["This", "was", "easy."] },
+                    { text: "My father was tired.", jp: "私の父は疲れていました。", chunks: ["My", "father", "was", "tired."] },
+                    { text: "You were kind.", jp: "あなたは親切でした。", chunks: ["You", "were", "kind."] },
+                    { text: "We were students.", jp: "私たちは学生でした。", chunks: ["We", "were", "students."] },
+                    { text: "They were good friends.", jp: "彼らは良い友達でした。", chunks: ["They", "were", "good", "friends."] },
+                    { text: "The books were old.", jp: "その本たちは古かった。", chunks: ["The", "books", "were", "old."] },
+                    { text: "We were at home.", jp: "私たちは家にいました。", chunks: ["We", "were", "at", "home."] },
+                    { text: "I was not hungry.", jp: "私は空腹ではありませんでした。", chunks: ["I", "was", "not", "hungry."] },
+                    { text: "He wasn't free.", jp: "彼は暇ではありませんでした。", chunks: ["He", "wasn't", "free."] },
+                    { text: "She wasn't a nurse.", jp: "彼女は看護師ではありませんでした。", chunks: ["She", "wasn't", "a", "nurse."] },
+                    { text: "It wasn't cold.", jp: "寒くありませんでした。", chunks: ["It", "wasn't", "cold."] },
+                    { text: "We weren't sad.", jp: "私たちは悲しくありませんでした。", chunks: ["We", "weren't", "sad."] },
+                    { text: "They weren't doctors.", jp: "彼らは医者ではありませんでした。", chunks: ["They", "weren't", "doctors."] },
+                    { text: "Was he a pilot?", jp: "彼はパイロットでしたか。", chunks: ["Was", "he", "a", "pilot?"] },
+                    { text: "Was she your sister?", jp: "彼女はあなたの妹でしたか。", chunks: ["Was", "she", "your", "sister?"] },
+                    { text: "Were you busy?", jp: "あなたは忙しかったですか。", chunks: ["Were", "you", "busy?"] },
+                    { text: "Were they in the park?", jp: "彼らは公園にいましたか。", chunks: ["Were", "they", "in", "the", "park?"] },
+                    { text: "I was very tired yesterday.", jp: "私は昨日とても疲れていました。", chunks: ["I", "was", "very", "tired", "yesterday."] },
+                    { text: "He was free last Sunday.", jp: "彼はこの前の日曜日は暇でした。", chunks: ["He", "was", "free", "last", "Sunday."] },
+                    { text: "She was in the kitchen then.", jp: "彼女はその時台所にいました。", chunks: ["She", "was", "in", "the", "kitchen", "then."] },
+                    { text: "It was cloudy yesterday morning.", jp: "昨日の朝は曇っていました。", chunks: ["It", "was", "cloudy", "yesterday", "morning."] },
+                    { text: "We were late for school.", jp: "私たちは学校に遅刻しました。", chunks: ["We", "were", "late", "for", "school."] },
+                    { text: "You were a good soccer player.", jp: "あなたは良いサッカー選手でした。", chunks: ["You", "were", "a", "good", "soccer", "player."] },
+                    { text: "They were at the library yesterday.", jp: "彼らは昨日図書館にいました。", chunks: ["They", "were", "at", "the", "library", "yesterday."] },
+                    { text: "The movie was very interesting.", jp: "その映画はとても面白かった。", chunks: ["The", "movie", "was", "very", "interesting."] },
+                    { text: "My parents were young then.", jp: "私の両親はその時若かった。", chunks: ["My", "parents", "were", "young", "then."] },
+                    { text: "Those flowers were beautiful.", jp: "あれらの花は美しかった。", chunks: ["Those", "flowers", "were", "beautiful."] },
+                    { text: "I wasn't at school yesterday.", jp: "私は昨日学校にいませんでした。", chunks: ["I", "wasn't", "at", "school", "yesterday."] },
+                    { text: "He wasn't in his room then.", jp: "彼はその時自分の部屋にいませんでした。", chunks: ["He", "wasn't", "in", "his", "room", "then."] },
+                    { text: "We weren't busy last week.", jp: "私たちは先週忙しくありませんでした。", chunks: ["We", "weren't", "busy", "last", "week."] },
+                    { text: "They weren't members of the team.", jp: "彼らはそのチームの一員ではありませんでした。", chunks: ["They", "weren't", "members", "of", "the", "team."] },
+                    { text: "The store wasn't open today.", jp: "その店は今日開いていませんでした。", chunks: ["The", "store", "wasn't", "open", "today."] },
+                    { text: "Was Ken in the classroom then?", jp: "ケンはその時教室にいましたか。", chunks: ["Was", "Ken", "in", "the", "classroom", "then?"] },
+                    { text: "Was your father a teacher?", jp: "あなたのお父さんは先生でしたか。", chunks: ["Was", "your", "father", "a", "teacher?"] },
+                    { text: "Were you happy with the result?", jp: "あなたはその結果に満足していましたか。", chunks: ["Were", "you", "happy", "with", "the", "result?"] },
+                    { text: "Were they famous in Japan?", jp: "彼らは日本で有名でしたか。", chunks: ["Were", "they", "famous", "in", "Japan?"] },
+                    { text: "Where was your bag?", jp: "あなたのかばんはどこにありましたか。", chunks: ["Where", "was", "your", "bag?"] },
+                    { text: "Where were you last night?", jp: "あなたは昨夜どこにいましたか。", chunks: ["Where", "were", "you", "last", "night?"] },
+                    { text: "Who was that girl?", jp: "あの女の子は誰でしたか。", chunks: ["Who", "was", "that", "girl?"] },
+                    { text: "When was the party?", jp: "パーティーはいつでしたか。", chunks: ["When", "was", "the", "party?"] },
+                    { text: "How was the weather yesterday?", jp: "昨日の天気はどうでしたか。", chunks: ["How", "was", "the", "weather", "yesterday?"] },
+                    { text: "How old was he then?", jp: "彼はその時何歳でしたか。", chunks: ["How", "old", "was", "he", "then?"] },
+                ]
+            },
+            {
+                id: 'g2_past_cont',
+                grade: '中学2年',
+                category: '過去進行形',
+                description: 'was / were + ~ing（肯定・否定・疑問）',
+                questions: [
+                    { text: "I was playing tennis.", jp: "私はテニスをしていました。", chunks: ["I", "was", "playing", "tennis."] },
+                    { text: "He was running.", jp: "彼は走っていました。", chunks: ["He", "was", "running."] },
+                    { text: "She was cooking.", jp: "彼女は料理をしていました。", chunks: ["She", "was", "cooking."] },
+                    { text: "It was raining.", jp: "雨が降っていました。", chunks: ["It", "was", "raining."] },
+                    { text: "We were eating lunch.", jp: "私たちは昼食を食べていました。", chunks: ["We", "were", "eating", "lunch."] },
+                    { text: "They were swimming.", jp: "彼らは泳いでいました。", chunks: ["They", "were", "swimming."] },
+                    { text: "I was watching TV.", jp: "私はテレビを見ていました。", chunks: ["I", "was", "watching", "TV."] },
+                    { text: "Ken was studying.", jp: "ケンは勉強していました。", chunks: ["Ken", "was", "studying."] },
+                    { text: "The bird was flying.", jp: "その鳥は飛んでいました。", chunks: ["The", "bird", "was", "flying."] },
+                    { text: "You were sleeping.", jp: "あなたは眠っていました。", chunks: ["You", "were", "sleeping."] },
+                    { text: "I wasn't listening.", jp: "私は聞いていませんでした。", chunks: ["I", "wasn't", "listening."] },
+                    { text: "He wasn't crying.", jp: "彼は泣いていませんでした。", chunks: ["He", "wasn't", "crying."] },
+                    { text: "She wasn't reading.", jp: "彼女は読んでいませんでした。", chunks: ["She", "wasn't", "reading."] },
+                    { text: "We weren't talking.", jp: "私たちは話していませんでした。", chunks: ["We", "weren't", "talking."] },
+                    { text: "They weren't working.", jp: "彼らは働いていませんでした。", chunks: ["They", "weren't", "working."] },
+                    { text: "Was he walking?", jp: "彼は歩いていましたか。", chunks: ["Was", "he", "walking?"] },
+                    { text: "Was she singing?", jp: "彼女は歌っていましたか。", chunks: ["Was", "she", "singing?"] },
+                    { text: "Were you helping?", jp: "あなたは手伝っていましたか。", chunks: ["Were", "you", "helping?"] },
+                    { text: "Were they waiting?", jp: "彼らは待っていましたか。", chunks: ["Were", "they", "waiting?"] },
+                    { text: "What was he doing?", jp: "彼は何をしていましたか。", chunks: ["What", "was", "he", "doing?"] },
+                    { text: "What were you doing?", jp: "あなたは何をしていましたか。", chunks: ["What", "were", "you", "doing?"] },
+                    { text: "Yes, I was.", jp: "はい、していました。", chunks: ["Yes,", "I", "was."] },
+                    { text: "No, they weren't.", jp: "いいえ、していませんでした。", chunks: ["No,", "they", "weren't."] },
+                    { text: "Who was running?", jp: "誰が走っていましたか。", chunks: ["Who", "was", "running?"] },
+                    { text: "Where were you going?", jp: "あなたはどこへ行く途中でしたか。", chunks: ["Where", "were", "you", "going?"] },
+                    { text: "I was reading a book then.", jp: "私はその時本を読んでいました。", chunks: ["I", "was", "reading", "a", "book", "then."] },
+                    { text: "He was taking a picture then.", jp: "彼はその時写真を撮っていました。", chunks: ["He", "was", "taking", "a", "picture", "then."] },
+                    { text: "She was playing the piano then.", jp: "彼女はその時ピアノを弾いていました。", chunks: ["She", "was", "playing", "the", "piano", "then."] },
+                    { text: "We were having dinner then.", jp: "私たちはその時夕食を食べていました。", chunks: ["We", "were", "having", "dinner", "then."] },
+                    { text: "They were making a box then.", jp: "彼らはその時箱を作っていました。", chunks: ["They", "were", "making", "a", "box", "then."] },
+                    { text: "I was doing my homework at that time.", jp: "私はその時宿題をしていました。", chunks: ["I", "was", "doing", "my", "homework", "at", "that", "time."] },
+                    { text: "Ken was using the computer at that time.", jp: "ケンはその時コンピュータを使っていました。", chunks: ["Ken", "was", "using", "the", "computer", "at", "that", "time."] },
+                    { text: "My mother was cooking dinner then.", jp: "私の母はその時夕食を作っていました。", chunks: ["My", "mother", "was", "cooking", "dinner", "then."] },
+                    { text: "We were swimming in the sea.", jp: "私たちは海で泳いでいました。", chunks: ["We", "were", "swimming", "in", "the", "sea."] },
+                    { text: "The students were cleaning the room.", jp: "生徒たちは部屋を掃除していました。", chunks: ["The", "students", "were", "cleaning", "the", "room."] },
+                    { text: "I wasn't watching TV then.", jp: "私はその時テレビを見ていませんでした。", chunks: ["I", "wasn't", "watching", "TV", "then."] },
+                    { text: "He wasn't studying English then.", jp: "彼はその時英語を勉強していませんでした。", chunks: ["He", "wasn't", "studying", "English", "then."] },
+                    { text: "She wasn't writing a letter.", jp: "彼女は手紙を書いていませんでした。", chunks: ["She", "wasn't", "writing", "a", "letter."] },
+                    { text: "We weren't playing soccer in the park.", jp: "私たちは公園でサッカーをしていませんでした。", chunks: ["We", "weren't", "playing", "soccer", "in", "the", "park."] },
+                    { text: "They weren't listening to music.", jp: "彼らは音楽を聴いていませんでした。", chunks: ["They", "weren't", "listening", "to", "music."] },
+                    { text: "Was he washing the car then?", jp: "彼はその時車を洗っていましたか。", chunks: ["Was", "he", "washing", "the", "car", "then?"] },
+                    { text: "Was your sister studying math?", jp: "あなたの妹は数学を勉強していましたか。", chunks: ["Was", "your", "sister", "studying", "math?"] },
+                    { text: "Were you waiting for the bus?", jp: "あなたはバスを待っていましたか。", chunks: ["Were", "you", "waiting", "for", "the", "bus?"] },
+                    { text: "Were they speaking Japanese?", jp: "彼らは日本語を話していましたか。", chunks: ["Were", "they", "speaking", "Japanese?"] },
+                    { text: "What were you doing at seven?", jp: "あなたは7時に何をしていましたか。", chunks: ["What", "were", "you", "doing", "at", "seven?"] },
+                    { text: "What was she looking for?", jp: "彼女は何を探していましたか。", chunks: ["What", "was", "she", "looking", "for?"] },
+                    { text: "Who was playing the guitar?", jp: "誰がギターを弾いていましたか。", chunks: ["Who", "was", "playing", "the", "guitar?"] },
+                    { text: "Where was Ken playing soccer?", jp: "ケンはどこでサッカーをしていましたか。", chunks: ["Where", "was", "Ken", "playing", "soccer?"] },
+                    { text: "Who were you talking with?", jp: "あなたは誰と話していましたか。", chunks: ["Who", "were", "you", "talking", "with?"] },
+                    { text: "Why were you running then?", jp: "あなたはなぜその時走っていたのですか。", chunks: ["Why", "were", "you", "running", "then?"] },
+                ]
+            },
+            {
+                id: 'g2_svc',
+                grade: '中学2年',
+                category: 'SVC（五感・変化）',
+                description: 'look / sound / taste / feel / smell / become / get',
+                questions: [
+                    { text: "You look happy.", jp: "あなたは幸せそうに見えます。", chunks: ["You", "look", "happy."] },
+                    { text: "That sounds good.", jp: "それは良さそうに聞こえます（いいですね）。", chunks: ["That", "sounds", "good."] },
+                    { text: "This cake tastes sweet.", jp: "このケーキは甘い味がします。", chunks: ["This", "cake", "tastes", "sweet."] },
+                    { text: "The flower smells nice.", jp: "その花はよい香りがします。", chunks: ["The", "flower", "smells", "nice."] },
+                    { text: "This cloth feels soft.", jp: "この布は柔らかい感じがします。", chunks: ["This", "cloth", "feels", "soft."] },
+                    { text: "He looks busy.", jp: "彼は忙しそうに見えます。", chunks: ["He", "looks", "busy."] },
+                    { text: "It sounds fun.", jp: "それは楽しそうですね。", chunks: ["It", "sounds", "fun."] },
+                    { text: "This soup tastes good.", jp: "このスープはおいしい味がします。", chunks: ["This", "soup", "tastes", "good."] },
+                    { text: "The room smells bad.", jp: "その部屋は嫌なにおいがします。", chunks: ["The", "room", "smells", "bad."] },
+                    { text: "I feel sick.", jp: "私は気分が悪いです（病気の感じがする）。", chunks: ["I", "feel", "sick."] },
+                    { text: "She became a doctor.", jp: "彼女は医者になりました。", chunks: ["She", "became", "a", "doctor."] },
+                    { text: "I got tired.", jp: "私は疲れました。", chunks: ["I", "got", "tired."] },
+                    { text: "It looks easy.", jp: "それは簡単そうに見えます。", chunks: ["It", "looks", "easy."] },
+                    { text: "That idea sounds interesting.", jp: "その考えは面白そうですね。", chunks: ["That", "idea", "sounds", "interesting."] },
+                    { text: "The apple tastes sour.", jp: "そのリンゴは酸っぱい味がします。", chunks: ["The", "apple", "tastes", "sour."] },
+                    { text: "You feel warm.", jp: "あなた（の体）は温かいですね。", chunks: ["You", "feel", "warm."] },
+                    { text: "They became friends.", jp: "彼らは友達になりました。", chunks: ["They", "became", "friends."] },
+                    { text: "It got dark.", jp: "暗くなりました。", chunks: ["It", "got", "dark."] },
+                    { text: "The car looks new.", jp: "その車は新しく見えます。", chunks: ["The", "car", "looks", "new."] },
+                    { text: "Her voice sounds beautiful.", jp: "彼女の声は美しく聞こえます。", chunks: ["Her", "voice", "sounds", "beautiful."] },
+                    { text: "This fish smells fresh.", jp: "この魚は新鮮なにおいがします。", chunks: ["This", "fish", "smells", "fresh."] },
+                    { text: "We felt sad.", jp: "私たちは悲しく感じました。", chunks: ["We", "felt", "sad."] },
+                    { text: "He became famous.", jp: "彼は有名になりました。", chunks: ["He", "became", "famous."] },
+                    { text: "I get hungry.", jp: "私はお腹が空きます。", chunks: ["I", "get", "hungry."] },
+                    { text: "She looks tired.", jp: "彼女は疲れているように見えます。", chunks: ["She", "looks", "tired."] },
+                    { text: "You look very young today.", jp: "あなたは今日とても若く見えます。", chunks: ["You", "look", "very", "young", "today."] },
+                    { text: "The music sounds really nice.", jp: "その音楽は本当に素敵に聞こえます。", chunks: ["The", "music", "sounds", "really", "nice."] },
+                    { text: "This orange tastes very sweet.", jp: "このオレンジはとても甘い味がします。", chunks: ["This", "orange", "tastes", "very", "sweet."] },
+                    { text: "Dinner smells delicious tonight.", jp: "今夜の夕食はおいしそうなにおいがします。", chunks: ["Dinner", "smells", "delicious", "tonight."] },
+                    { text: "I felt happy yesterday.", jp: "私は昨日幸せな気分でした。", chunks: ["I", "felt", "happy", "yesterday."] },
+                    { text: "He became a good teacher.", jp: "彼は良い先生になりました。", chunks: ["He", "became", "a", "good", "teacher."] },
+                    { text: "My father got angry yesterday.", jp: "父は昨日怒りました。", chunks: ["My", "father", "got", "angry", "yesterday."] },
+                    { text: "The question looks difficult to me.", jp: "その質問は私には難しそうに見えます。", chunks: ["The", "question", "looks", "difficult", "to", "me."] },
+                    { text: "Does that sound strange?", jp: "それは奇妙に聞こえますか。", chunks: ["Does", "that", "sound", "strange?"] },
+                    { text: "Medicine tastes bitter sometimes.", jp: "薬は時々苦い味がします。", chunks: ["Medicine", "tastes", "bitter", "sometimes."] },
+                    { text: "Something smells burning in the kitchen.", jp: "台所で何かが焦げているにおいがします。", chunks: ["Something", "smells", "burning", "in", "the", "kitchen."] },
+                    { text: "I don't feel well today.", jp: "私は今日気分が良くありません。", chunks: ["I", "don't", "feel", "well", "today."] },
+                    { text: "It is getting cold outside.", jp: "外は寒くなってきています。", chunks: ["It", "is", "getting", "cold", "outside."] },
+                    { text: "The leaves became red in autumn.", jp: "秋に木の葉は赤くなりました。", chunks: ["The", "leaves", "became", "red", "in", "autumn."] },
+                    { text: "You look like your mother.", jp: "あなたはお母さんに似ていますね。", chunks: ["You", "look", "like", "your", "mother."] },
+                    { text: "It sounds like a true story.", jp: "それは本当の話のように聞こえます。", chunks: ["It", "sounds", "like", "a", "true", "story."] },
+                    { text: "This tastes like chocolate.", jp: "これはチョコレートのような味がします。", chunks: ["This", "tastes", "like", "chocolate."] },
+                    { text: "It smells like coffee.", jp: "コーヒーのような香りがします。", chunks: ["It", "smells", "like", "coffee."] },
+                    { text: "It feels like spring.", jp: "春のような感じがします。", chunks: ["It", "feels", "like", "spring."] },
+                    { text: "I want to become a soccer player.", jp: "私はサッカー選手になりたいです。", chunks: ["I", "want", "to", "become", "a", "soccer", "player."] },
+                    { text: "How does this cake taste?", jp: "このケーキはどんな味がしますか。", chunks: ["How", "does", "this", "cake", "taste?"] },
+                    { text: "How does he feel now?", jp: "彼は今どんな気分ですか。", chunks: ["How", "does", "he", "feel", "now?"] },
+                    { text: "What did you become?", jp: "あなたは何になりましたか。", chunks: ["What", "did", "you", "become?"] },
+                    { text: "Why did you get up early?", jp: "なぜあなたは早く起きたのですか。", chunks: ["Why", "did", "you", "get", "up", "early?"] },
+                    { text: "The sky became blue and clear.", jp: "空は青く晴れわたりました。", chunks: ["The", "sky", "became", "blue", "and", "clear."] },
+                ]
+            },
+            {
+                id: 'g2_going_to',
+                grade: '中学2年',
+                category: 'be going to（未来表現）',
+                description: 'be going to + 動詞の原形（意図・予定・予測）',
+                questions: [
+                    { text: "I am going to play tennis.", jp: "私はテニスをするつもりです。", chunks: ["I", "am", "going", "to", "play", "tennis."] },
+                    { text: "You are going to visit Kyoto.", jp: "あなたは京都を訪れるつもりです。", chunks: ["You", "are", "going", "to", "visit", "Kyoto."] },
+                    { text: "He is going to buy a car.", jp: "彼は車を買うつもりです。", chunks: ["He", "is", "going", "to", "buy", "a", "car."] },
+                    { text: "She is going to cook dinner.", jp: "彼女は夕食を作るつもりです。", chunks: ["She", "is", "going", "to", "cook", "dinner."] },
+                    { text: "We are going to watch TV.", jp: "私たちはテレビを見るつもりです。", chunks: ["We", "are", "going", "to", "watch", "TV."] },
+                    { text: "They are going to study.", jp: "彼らは勉強するつもりです。", chunks: ["They", "are", "going", "to", "study."] },
+                    { text: "I am going to clean my room.", jp: "私は部屋を掃除するつもりです。", chunks: ["I", "am", "going", "to", "clean", "my", "room."] },
+                    { text: "Ken is going to run.", jp: "ケンは走るつもりです。", chunks: ["Ken", "is", "going", "to", "run."] },
+                    { text: "It is going to rain.", jp: "雨が降るでしょう。", chunks: ["It", "is", "going", "to", "rain."] },
+                    { text: "We are going to swim.", jp: "私たちは泳ぐつもりです。", chunks: ["We", "are", "going", "to", "swim."] },
+                    { text: "I am not going to go.", jp: "私は行かないつもりです。", chunks: ["I", "am", "not", "going", "to", "go."] },
+                    { text: "You aren't going to eat.", jp: "あなたは食べるつもりはありません。", chunks: ["You", "aren't", "going", "to", "eat."] },
+                    { text: "He isn't going to help.", jp: "彼は手伝わないつもりです。", chunks: ["He", "isn't", "going", "to", "help."] },
+                    { text: "She isn't going to read.", jp: "彼女は読まないつもりです。", chunks: ["She", "isn't", "going", "to", "read."] },
+                    { text: "We aren't going to use it.", jp: "私たちはそれを使わないつもりです。", chunks: ["We", "aren't", "going", "to", "use", "it."] },
+                    { text: "Are you going to study?", jp: "あなたは勉強するつもりですか。", chunks: ["Are", "you", "going", "to", "study?"] },
+                    { text: "Is he going to come?", jp: "彼は来るつもりですか。", chunks: ["Is", "he", "going", "to", "come?"] },
+                    { text: "Is she going to make a cake?", jp: "彼女はケーキを作るつもりですか。", chunks: ["Is", "she", "going", "to", "make", "a", "cake?"] },
+                    { text: "Are they going to walk?", jp: "彼らは歩くつもりですか。", chunks: ["Are", "they", "going", "to", "walk?"] },
+                    { text: "Are you going to stay home?", jp: "あなたは家にいるつもりですか。", chunks: ["Are", "you", "going", "to", "stay", "home?"] },
+                    { text: "What are you going to do?", jp: "あなたは何をするつもりですか。", chunks: ["What", "are", "you", "going", "to", "do?"] },
+                    { text: "Where is he going to go?", jp: "彼はどこへ行くつもりですか。", chunks: ["Where", "is", "he", "going", "to", "go?"] },
+                    { text: "When are they going to start?", jp: "彼らはいつ始めるつもりですか。", chunks: ["When", "are", "they", "going", "to", "start?"] },
+                    { text: "Yes, I am.", jp: "はい、そのつもりです。", chunks: ["Yes,", "I", "am."] },
+                    { text: "No, he isn't.", jp: "いいえ、そのつもりはありません。", chunks: ["No,", "he", "isn't."] },
+                    { text: "I am going to visit my uncle tomorrow.", jp: "私は明日、おじを訪ねるつもりです。", chunks: ["I", "am", "going", "to", "visit", "my", "uncle", "tomorrow."] },
+                    { text: "He is going to play baseball next Sunday.", jp: "彼は次の日曜日に野球をするつもりです。", chunks: ["He", "is", "going", "to", "play", "baseball", "next", "Sunday."] },
+                    { text: "She is going to buy a new bike next week.", jp: "彼女は来週、新しい自転車を買うつもりです。", chunks: ["She", "is", "going", "to", "buy", "a", "new", "bike", "next", "week."] },
+                    { text: "We are going to have a party tonight.", jp: "私たちは今夜パーティーをするつもりです。", chunks: ["We", "are", "going", "to", "have", "a", "party", "tonight."] },
+                    { text: "They are going to stay in Tokyo for a week.", jp: "彼らは東京に1週間滞在するつもりです。", chunks: ["They", "are", "going", "to", "stay", "in", "Tokyo", "for", "a", "week."] },
+                    { text: "I am going to get up early tomorrow morning.", jp: "私は明日の朝、早く起きるつもりです。", chunks: ["I", "am", "going", "to", "get", "up", "early", "tomorrow", "morning."] },
+                    { text: "Ken is going to do his homework after dinner.", jp: "ケンは夕食後に宿題をするつもりです。", chunks: ["Ken", "is", "going", "to", "do", "his", "homework", "after", "dinner."] },
+                    { text: "My father is going to wash the car this weekend.", jp: "父は今週末、車を洗うつもりです。", chunks: ["My", "father", "is", "going", "to", "wash", "the", "car", "this", "weekend."] },
+                    { text: "We are going to see a movie on Friday.", jp: "私たちは金曜日に映画を見るつもりです。", chunks: ["We", "are", "going", "to", "see", "a", "movie", "on", "Friday."] },
+                    { text: "I am going to be a teacher in the future.", jp: "私は将来、先生になるつもりです。", chunks: ["I", "am", "going", "to", "be", "a", "teacher", "in", "the", "future."] },
+                    { text: "I am not going to go to school tomorrow.", jp: "私は明日学校へ行かないつもりです。", chunks: ["I", "am", "not", "going", "to", "go", "to", "school", "tomorrow."] },
+                    { text: "He isn't going to play video games tonight.", jp: "彼は今夜テレビゲームをしないつもりです。", chunks: ["He", "isn't", "going", "to", "play", "video", "games", "tonight."] },
+                    { text: "She isn't going to meet him next Monday.", jp: "彼女は次の月曜日に彼と会わないつもりです。", chunks: ["She", "isn't", "going", "to", "meet", "him", "next", "Monday."] },
+                    { text: "We aren't going to practice soccer today.", jp: "私たちは今日サッカーを練習しないつもりです。", chunks: ["We", "aren't", "going", "to", "practice", "soccer", "today."] },
+                    { text: "It isn't going to be sunny tomorrow.", jp: "明日は晴れないでしょう。", chunks: ["It", "isn't", "going", "to", "be", "sunny", "tomorrow."] },
+                    { text: "Are you going to help your mother tomorrow?", jp: "あなたは明日お母さんを手伝うつもりですか。", chunks: ["Are", "you", "going", "to", "help", "your", "mother", "tomorrow?"] },
+                    { text: "Is your sister going to make lunch for us?", jp: "あなたの妹は私たちのために昼食を作るつもりですか。", chunks: ["Is", "your", "sister", "going", "to", "make", "lunch", "for", "us?"] },
+                    { text: "Are they going to play tennis in the park?", jp: "彼らは公園でテニスをするつもりですか。", chunks: ["Are", "they", "going", "to", "play", "tennis", "in", "the", "park?"] },
+                    { text: "Are you going to be busy next week?", jp: "あなたは来週忙しくなるでしょうか。", chunks: ["Are", "you", "going", "to", "be", "busy", "next", "week?"] },
+                    { text: "What are you going to buy at the store?", jp: "あなたはその店で何を買うつもりですか。", chunks: ["What", "are", "you", "going", "to", "buy", "at", "the", "store?"] },
+                    { text: "Where is she going to meet her friends?", jp: "彼女はどこで友達と会うつもりですか。", chunks: ["Where", "is", "she", "going", "to", "meet", "her", "friends?"] },
+                    { text: "When are we going to leave here?", jp: "私たちはいつここを出発するつもりですか。", chunks: ["When", "are", "we", "going", "to", "leave", "here?"] },
+                    { text: "Who is going to cook dinner tonight?", jp: "今夜は誰が夕食を作るつもりですか。", chunks: ["Who", "is", "going", "to", "cook", "dinner", "tonight?"] },
+                    { text: "What time are you going to get up?", jp: "あなたは何時に起きるつもりですか。", chunks: ["What", "time", "are", "you", "going", "to", "get", "up?"] },
+                    { text: "How are you going to go to the station?", jp: "あなたはどうやって駅まで行くつもりですか。", chunks: ["How", "are", "you", "going", "to", "go", "to", "the", "station?"] },
+                ]
+            },
+            {
+                id: 'g2_svoo',
+                grade: '中学2年',
+                category: 'SVOO（give / show / tell / buy）',
+                description: '動詞 + 人 + 物（第4文型）',
+                questions: [
+                    { text: "Give me a pen.", jp: "私にペンをください。", chunks: ["Give", "me", "a", "pen."] },
+                    { text: "Show me your bag.", jp: "私にあなたのかばんを見せて。", chunks: ["Show", "me", "your", "bag."] },
+                    { text: "He gave me a book.", jp: "彼は私に本をくれました。", chunks: ["He", "gave", "me", "a", "book."] },
+                    { text: "She showed us a picture.", jp: "彼女は私たちに写真を見せました。", chunks: ["She", "showed", "us", "a", "picture."] },
+                    { text: "I told him the story.", jp: "私は彼にその話をしました。", chunks: ["I", "told", "him", "the", "story."] },
+                    { text: "My father bought me a bike.", jp: "父は私に自転車を買ってくれました。", chunks: ["My", "father", "bought", "me", "a", "bike."] },
+                    { text: "I will make you a cake.", jp: "私はあなたにケーキを作ってあげます。", chunks: ["I", "will", "make", "you", "a", "cake."] },
+                    { text: "Teach me English.", jp: "私に英語を教えて。", chunks: ["Teach", "me", "English."] },
+                    { text: "Please tell me your name.", jp: "私にあなたの名前を教えてください。", chunks: ["Please", "tell", "me", "your", "name."] },
+                    { text: "Show him the map.", jp: "彼に地図を見せて。", chunks: ["Show", "him", "the", "map."] },
+                    { text: "I sent her a letter.", jp: "私は彼女に手紙を送りました。", chunks: ["I", "sent", "her", "a", "letter."] },
+                    { text: "He lent me a dictionary.", jp: "彼は私に辞書を貸してくれました。", chunks: ["He", "lent", "me", "a", "dictionary."] },
+                    { text: "She made us lunch.", jp: "彼女は私たちに昼食を作ってくれました。", chunks: ["She", "made", "us", "lunch."] },
+                    { text: "Give the dog some water.", jp: "その犬に水をあげて。", chunks: ["Give", "the", "dog", "some", "water."] },
+                    { text: "Buy him a present.", jp: "彼にプレゼントを買ってあげて。", chunks: ["Buy", "him", "a", "present."] },
+                    { text: "My mother cooked me dinner.", jp: "母は私に夕食を作ってくれました。", chunks: ["My", "mother", "cooked", "me", "dinner."] },
+                    { text: "He showed me his room.", jp: "彼は私に自分の部屋を見せました。", chunks: ["He", "showed", "me", "his", "room."] },
+                    { text: "Please give me a chance.", jp: "私にチャンスをください。", chunks: ["Please", "give", "me", "a", "chance."] },
+                    { text: "I told my sister the news.", jp: "私は妹にその知らせを話しました。", chunks: ["I", "told", "my", "sister", "the", "news."] },
+                    { text: "Did you buy him a camera?", jp: "あなたは彼にカメラを買いましたか。", chunks: ["Did", "you", "buy", "him", "a", "camera?"] },
+                    { text: "Did she show you the photo?", jp: "彼女はあなたにその写真を見せましたか。", chunks: ["Did", "she", "show", "you", "the", "photo?"] },
+                    { text: "Don't tell him the answer.", jp: "彼に答えを教えないで。", chunks: ["Don't", "tell", "him", "the", "answer."] },
+                    { text: "I will give you this ticket.", jp: "あなたにこのチケットをあげます。", chunks: ["I", "will", "give", "you", "this", "ticket."] },
+                    { text: "He teaches us math.", jp: "彼は私たちに数学を教えています。", chunks: ["He", "teaches", "us", "math."] },
+                    { text: "Mr. Tanaka teaches us history.", jp: "田中先生は私たちに歴史を教えています。", chunks: ["Mr.", "Tanaka", "teaches", "us", "history."] },
+                    { text: "Please show me your notebook later.", jp: "後で私にあなたのノートを見せてください。", chunks: ["Please", "show", "me", "your", "notebook", "later."] },
+                    { text: "I gave my brother a new watch.", jp: "私は兄に新しい時計をあげました。", chunks: ["I", "gave", "my", "brother", "a", "new", "watch."] },
+                    { text: "My uncle bought me a computer yesterday.", jp: "おじは昨日、私にコンピュータを買ってくれました。", chunks: ["My", "uncle", "bought", "me", "a", "computer", "yesterday."] },
+                    { text: "She showed her friends her new dress.", jp: "彼女は友達に新しいドレスを見せました。", chunks: ["She", "showed", "her", "friends", "her", "new", "dress."] },
+                    { text: "Please tell me the way to the station.", jp: "駅への道を教えてください。", chunks: ["Please", "tell", "me", "the", "way", "to", "the", "station."] },
+                    { text: "My grandfather told me an old story.", jp: "祖父は私に昔話をしてくれました。", chunks: ["My", "grandfather", "told", "me", "an", "old", "story."] },
+                    { text: "Will you show me your passport?", jp: "私にパスポートを見せてくれませんか。", chunks: ["Will", "you", "show", "me", "your", "passport?"] },
+                    { text: "I will send you an email tonight.", jp: "今夜あなたにメールを送ります。", chunks: ["I", "will", "send", "you", "an", "email", "tonight."] },
+                    { text: "Please lend me your pen for a minute.", jp: "少しの間、私にペンを貸してください。", chunks: ["Please", "lend", "me", "your", "pen", "for", "a", "minute."] },
+                    { text: "He made his son a toy box.", jp: "彼は息子におもちゃ箱を作ってやりました。", chunks: ["He", "made", "his", "son", "a", "toy", "box."] },
+                    { text: "Can you tell me your phone number?", jp: "あなたの電話番号を教えてくれますか。", chunks: ["Can", "you", "tell", "me", "your", "phone", "number?"] },
+                    { text: "I want to give her a birthday present.", jp: "私は彼女に誕生日プレゼントをあげたいです。", chunks: ["I", "want", "to", "give", "her", "a", "birthday", "present."] },
+                    { text: "My aunt sent us some apples from Aomori.", jp: "おばは青森から私たちにリンゴを送ってくれました。", chunks: ["My", "aunt", "sent", "us", "some", "apples", "from", "Aomori."] },
+                    { text: "Did he show you the way to the park?", jp: "彼はあなたに公園への道を教えてくれましたか。", chunks: ["Did", "he", "show", "you", "the", "way", "to", "the", "park?"] },
+                    { text: "She made me a nice bag last week.", jp: "彼女は先週、私に素敵なバッグを作ってくれました。", chunks: ["She", "made", "me", "a", "nice", "bag", "last", "week."] },
+                    { text: "We gave our teacher a card.", jp: "私たちは先生にカードをあげました。", chunks: ["We", "gave", "our", "teacher", "a", "card."] },
+                    { text: "Who gave you this chocolate?", jp: "誰があなたにこのチョコレートをくれましたか。", chunks: ["Who", "gave", "you", "this", "chocolate?"] },
+                    { text: "My mother bought my sister a yukata.", jp: "母は姉に浴衣を買ってやりました。", chunks: ["My", "mother", "bought", "my", "sister", "a", "yukata."] },
+                    { text: "Please teach me how to play the guitar.", jp: "私にギターの弾き方を教えてください。", chunks: ["Please", "teach", "me", "how", "to", "play", "the", "guitar."] },
+                    { text: "He didn't tell me the truth.", jp: "彼は私に真実を話しませんでした。", chunks: ["He", "didn't", "tell", "me", "the", "truth."] },
+                    { text: "I will buy you a drink next time.", jp: "今度あなたに飲み物を買ってあげます。", chunks: ["I", "will", "buy", "you", "a", "drink", "next", "time."] },
+                    { text: "Can I ask you a question?", jp: "あなたに質問をしてもいいですか。", chunks: ["Can", "I", "ask", "you", "a", "question?"] },
+                    { text: "Show me what you have in your hand.", jp: "あなたが手に持っているものを私に見せて。", chunks: ["Show", "me", "what", "you", "have", "in", "your", "hand."] },
+                    { text: "I cooked him a special dinner.", jp: "私は彼に特別な夕食を作りました。", chunks: ["I", "cooked", "him", "a", "special", "dinner."] },
+                    { text: "Did your father buy you a smartphone?", jp: "お父さんはあなたにスマートフォンを買ってくれましたか。", chunks: ["Did", "your", "father", "buy", "you", "a", "smartphone?"] },
+                ]
+            },
+            {
+                id: 'g2_inf_noun',
+                grade: '中学2年',
+                category: '不定詞（名詞的用法）',
+                description: '〜すること（S / O / C）',
+                questions: [
+                    { text: "I want to play soccer.", jp: "私はサッカーがしたいです。", chunks: ["I", "want", "to", "play", "soccer."] },
+                    { text: "I like to swim.", jp: "私は泳ぐことが好きです。", chunks: ["I", "like", "to", "swim."] },
+                    { text: "He wants to act.", jp: "彼は演技がしたいです。", chunks: ["He", "wants", "to", "act."] },
+                    { text: "She likes to cook.", jp: "彼女は料理をすることが好きです。", chunks: ["She", "likes", "to", "cook."] },
+                    { text: "I want to be a teacher.", jp: "私は先生になりたいです。", chunks: ["I", "want", "to", "be", "a", "teacher."] },
+                    { text: "We like to sing songs.", jp: "私たちは歌を歌うことが好きです。", chunks: ["We", "like", "to", "sing", "songs."] },
+                    { text: "He wants to buy a car.", jp: "彼は車を買いたがっています。", chunks: ["He", "wants", "to", "buy", "a", "car."] },
+                    { text: "They like to play tennis.", jp: "彼らはテニスをすることが好きです。", chunks: ["They", "like", "to", "play", "tennis."] },
+                    { text: "I want to go to Tokyo.", jp: "私は東京へ行きたいです。", chunks: ["I", "want", "to", "go", "to", "Tokyo."] },
+                    { text: "She loves to dance.", jp: "彼女は踊ることが大好きです。", chunks: ["She", "loves", "to", "dance."] },
+                    { text: "Do you want to run?", jp: "あなたは走りたいですか。", chunks: ["Do", "you", "want", "to", "run?"] },
+                    { text: "Does he like to read?", jp: "彼は読むことが好きですか。", chunks: ["Does", "he", "like", "to", "read?"] },
+                    { text: "I need to study.", jp: "私は勉強する必要があります。", chunks: ["I", "need", "to", "study."] },
+                    { text: "You need to sleep.", jp: "あなたは眠る必要があります。", chunks: ["You", "need", "to", "sleep."] },
+                    { text: "He needs to help her.", jp: "彼は彼女を手伝う必要があります。", chunks: ["He", "needs", "to", "help", "her."] },
+                    { text: "I started to clean my room.", jp: "私は部屋を掃除し始めました。", chunks: ["I", "started", "to", "clean", "my", "room."] },
+                    { text: "She began to cry.", jp: "彼女は泣き出しました。", chunks: ["She", "began", "to", "cry."] },
+                    { text: "He started to run.", jp: "彼は走り始めました。", chunks: ["He", "started", "to", "run."] },
+                    { text: "I tried to open the door.", jp: "私はドアを開けようとしました。", chunks: ["I", "tried", "to", "open", "the", "door."] },
+                    { text: "We tried to catch the bus.", jp: "私たちはバスに乗ろうとしました（捕まえようとした）。", chunks: ["We", "tried", "to", "catch", "the", "bus."] },
+                    { text: "I hope to visit America.", jp: "私はアメリカを訪れたいと望んでいます。", chunks: ["I", "hope", "to", "visit", "America."] },
+                    { text: "We hope to see you again.", jp: "私たちはまたあなたに会いたいと願っています。", chunks: ["We", "hope", "to", "see", "you", "again."] },
+                    { text: "My dream is to be a singer.", jp: "私の夢は歌手になることです。", chunks: ["My", "dream", "is", "to", "be", "a", "singer."] },
+                    { text: "To play tennis is fun.", jp: "テニスをすることは楽しいです。", chunks: ["To", "play", "tennis", "is", "fun."] },
+                    { text: "To study English is important.", jp: "英語を勉強することは大切です。", chunks: ["To", "study", "English", "is", "important."] },
+                    { text: "I want to eat lunch now.", jp: "私は今、昼食を食べたいです。", chunks: ["I", "want", "to", "eat", "lunch", "now."] },
+                    { text: "He likes to watch movies on TV.", jp: "彼はテレビで映画を見ることが好きです。", chunks: ["He", "likes", "to", "watch", "movies", "on", "TV."] },
+                    { text: "She wants to be a doctor in the future.", jp: "彼女は将来、医者になりたいです。", chunks: ["She", "wants", "to", "be", "a", "doctor", "in", "the", "future."] },
+                    { text: "I decided to go to the party.", jp: "私はパーティーに行くことに決めました。", chunks: ["I", "decided", "to", "go", "to", "the", "party."] },
+                    { text: "We decided to study hard.", jp: "私たちは一生懸命勉強することに決めました。", chunks: ["We", "decided", "to", "study", "hard."] },
+                    { text: "He forgot to do his homework.", jp: "彼は宿題をすることを忘れました。", chunks: ["He", "forgot", "to", "do", "his", "homework."] },
+                    { text: "Don't forget to lock the door.", jp: "ドアに鍵をかけるのを忘れないで。", chunks: ["Don't", "forget", "to", "lock", "the", "door."] },
+                    { text: "I want to learn to swim.", jp: "私は泳げるようになりたいです。", chunks: ["I", "want", "to", "learn", "to", "swim."] },
+                    { text: "She started to learn English last year.", jp: "彼女は昨年、英語を学び始めました。", chunks: ["She", "started", "to", "learn", "English", "last", "year."] },
+                    { text: "It began to rain in the afternoon.", jp: "午後に雨が降り始めました。", chunks: ["It", "began", "to", "rain", "in", "the", "afternoon."] },
+                    { text: "Do you need to buy a notebook?", jp: "あなたはノートを買う必要がありますか。", chunks: ["Do", "you", "need", "to", "buy", "a", "notebook?"] },
+                    { text: "He didn't want to get up early.", jp: "彼は早く起きたくありませんでした。", chunks: ["He", "didn't", "want", "to", "get", "up", "early."] },
+                    { text: "She doesn't like to walk to school.", jp: "彼女は歩いて学校へ行くのが好きではありません。", chunks: ["She", "doesn't", "like", "to", "walk", "to", "school."] },
+                    { text: "My hobby is to take pictures.", jp: "私の趣味は写真を撮ることです。", chunks: ["My", "hobby", "is", "to", "take", "pictures."] },
+                    { text: "Her job is to teach Japanese.", jp: "彼女の仕事は日本語を教えることです。", chunks: ["Her", "job", "is", "to", "teach", "Japanese."] },
+                    { text: "His wish is to become a pilot.", jp: "彼の願いはパイロットになることです。", chunks: ["His", "wish", "is", "to", "become", "a", "pilot."] },
+                    { text: "To read many books is good.", jp: "たくさんの本を読むことは良いことです。", chunks: ["To", "read", "many", "books", "is", "good."] },
+                    { text: "To get up early is hard for me.", jp: "早く起きることは私には難しいです。", chunks: ["To", "get", "up", "early", "is", "hard", "for", "me."] },
+                    { text: "To speak English is useful.", jp: "英語を話すことは役に立ちます。", chunks: ["To", "speak", "English", "is", "useful."] },
+                    { text: "I tried to write a letter in English.", jp: "私は英語で手紙を書こうとしました。", chunks: ["I", "tried", "to", "write", "a", "letter", "in", "English."] },
+                    { text: "We planned to visit the museum.", jp: "私たちは博物館を訪れる計画を立てました。", chunks: ["We", "planned", "to", "visit", "the", "museum."] },
+                    { text: "I promise to help you.", jp: "私はあなたを手伝うことを約束します。", chunks: ["I", "promise", "to", "help", "you."] },
+                    { text: "Would you like to drink tea?", jp: "紅茶を飲むのはいかがですか（飲みたいですか）。", chunks: ["Would", "you", "like", "to", "drink", "tea?"] },
+                    { text: "What do you want to be?", jp: "あなたは何になりたいですか。", chunks: ["What", "do", "you", "want", "to", "be?"] },
+                    { text: "When did you start to learn piano?", jp: "あなたはいつピアノを習い始めましたか。", chunks: ["When", "did", "you", "start", "to", "learn", "piano?"] },
                 ]
             }
         ];
@@ -149,7 +589,7 @@
          */
         const state = {
             view: 'start', // start, menu, grade_select, course_select, countdown, history, game, result
-            selectedGrade: null,
+            selectedGrade: '中学2年',
             userData: { nickname: '', totalScore: 0, history: [], bestScores: {} },
             game: {
                 activeCourseId: null,
@@ -356,8 +796,8 @@
             `).join('');
 
             app.innerHTML = `
-                <div class="flex-1 flex flex-col bg-indigo-50">
-                    <div class="bg-indigo-600 p-6 pt-8 pb-10 rounded-b-[2rem] shadow-lg mb-6 relative">
+                <div class="app-root bg-indigo-50">
+                    <header class="header bg-indigo-600 p-6 pt-8 pb-10 rounded-b-[2rem] shadow-lg mb-6 relative">
                         <button onclick="goMenu()" class="absolute top-6 left-4 text-indigo-100 hover:text-white bg-indigo-700/50 p-2 rounded-full">
                             <i data-lucide="arrow-left" class="w-5 h-5"></i>
                         </button>
@@ -365,10 +805,10 @@
                             <h2 class="text-2xl font-bold text-white">学年を選択</h2>
                             <p class="text-indigo-200 text-sm mt-1">挑戦するレベルを選んでください</p>
                         </div>
-                    </div>
-                    <div class="flex-1 px-6 space-y-3 overflow-y-auto pb-8">
+                    </header>
+                    <main class="content px-6 space-y-3 pb-8">
                         ${gradeButtons}
-                    </div>
+                    </main>
                 </div>
             `;
         }
@@ -398,8 +838,8 @@
             }).join('');
 
             app.innerHTML = `
-                <div class="flex-1 flex flex-col bg-indigo-50">
-                    <div class="bg-indigo-600 p-6 pt-8 pb-10 rounded-b-[2rem] shadow-lg mb-6 relative">
+                <div class="app-root bg-indigo-50">
+                    <header class="header bg-indigo-600 p-6 pt-8 pb-10 rounded-b-[2rem] shadow-lg mb-6 relative">
                         <button onclick="state.view = 'grade_select'; render();" class="absolute top-6 left-4 text-indigo-100 hover:text-white bg-indigo-700/50 p-2 rounded-full">
                             <i data-lucide="arrow-left" class="w-5 h-5"></i>
                         </button>
@@ -407,10 +847,10 @@
                             <div class="text-indigo-300 text-xs font-bold uppercase tracking-wider mb-1">${state.selectedGrade}</div>
                             <h2 class="text-2xl font-bold text-white">文法項目を選択</h2>
                         </div>
-                    </div>
-                    <div class="flex-1 px-6 overflow-y-auto pb-8">
+                    </header>
+                    <main class="content px-6 pb-8">
                         ${coursesHtml}
-                    </div>
+                    </main>
                 </div>
             `;
         }
@@ -428,36 +868,83 @@
             const totalScore = state.userData.totalScore;
             const totalHighScore = Object.values(state.userData.bestScores).reduce((a, b) => a + b, 0);
             const playCount = state.userData.history.length;
-            
-            const scoreListHtml = ENGLISH_KNOCK_CONTENT.map(course => {
-                const score = state.userData.bestScores[course.id] || 0;
+
+            const grades = ['中学1年', '中学2年', '中学3年'];
+            if (!grades.includes(state.selectedGrade)) {
+                state.selectedGrade = '中学2年';
+            }
+
+            const gradeButtonsHtml = grades.map(grade => {
+                const isActive = state.selectedGrade === grade;
+                const btnClass = isActive
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'bg-indigo-50 text-indigo-500 border border-indigo-100 hover:bg-indigo-100';
                 return `
-                <div class="bg-white p-3 rounded-xl border border-slate-100 flex justify-between items-center">
-                    <div>
-                        <div class="text-xs text-indigo-500 font-bold">${course.grade}</div>
-                        <div class="font-bold text-slate-700 text-sm">${course.category}</div>
-                    </div>
-                    <div class="text-right">
-                        ${score > 0 ? `
-                            <div class="font-bold text-indigo-600">${score.toLocaleString()} pt</div>
-                        ` : `
-                            <div class="text-xs text-slate-300 font-medium">未プレイ</div>
-                        `}
-                    </div>
-                </div>`;
+                <button onclick="state.selectedGrade='${grade}'; renderHistory();" class="flex-1 px-3 py-2 rounded-xl text-sm font-bold transition-colors ${btnClass}">
+                    ${grade}
+                </button>
+                `;
             }).join('');
 
+            const scoreListHtml = ENGLISH_KNOCK_CONTENT
+                .filter(course => course.grade === state.selectedGrade)
+                .map(course => {
+                    const score = state.userData.bestScores[course.id];
+                    const scoreLabel = (score === undefined || score === 0) ? '未プレイ' : `${score.toLocaleString()} pt`;
+                    return `
+                    <div class="bg-white p-3 rounded-xl border border-slate-100 flex justify-between items-center">
+                        <div>
+                            <div class="text-xs text-indigo-500 font-bold">${course.grade}</div>
+                            <div class="font-bold text-slate-700 text-sm">${course.category}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-bold ${scoreLabel === '未プレイ' ? 'text-slate-300 text-xs font-medium' : 'text-indigo-600'}">${scoreLabel}</div>
+                        </div>
+                    </div>`;
+                }).join('');
+
+            if (!document.querySelector('.report-root')) {
+                initReportLayout();
+            }
+            const gradeSelectorEl = document.querySelector('.grade-selector');
+            if (gradeSelectorEl) {
+                gradeSelectorEl.innerHTML = `
+                    <div class="flex gap-2 bg-white/70 p-2 rounded-2xl border border-indigo-100 shadow-sm">
+                        ${gradeButtonsHtml}
+                    </div>
+                `;
+            }
+            const grammarListEl = document.querySelector('.grammar-list');
+            if (grammarListEl) {
+                grammarListEl.innerHTML = `
+                    <h3 class="font-bold text-slate-600 mb-3 flex items-center gap-2 text-sm">
+                        <i data-lucide="trophy" class="w-4 h-4 text-yellow-500"></i>
+                        項目別ハイスコア
+                    </h3>
+                    <div class="space-y-2">
+                        ${scoreListHtml}
+                    </div>
+                `;
+                grammarListEl.scrollTop = 0;
+            }
+        }
+
+        function initReportLayout() {
+            const totalScore = state.userData.totalScore;
+            const totalHighScore = Object.values(state.userData.bestScores).reduce((a, b) => a + b, 0);
+            const playCount = state.userData.history.length;
+
             app.innerHTML = `
-                <div class="flex-1 flex flex-col bg-slate-50">
-                    <div class="bg-white p-4 shadow-sm sticky top-0 z-20 flex items-center">
-                        <button onclick="goMenu()" class="p-2 -ml-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 mr-2">
+                <div class="report-root app-root bg-slate-50">
+                    <header class="report-header header bg-white p-4 shadow-sm flex items-center">
+                        <button onclick="goMenu()" class="back-button p-2 -ml-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 mr-2">
                             <i data-lucide="arrow-left" class="w-5 h-5"></i>
                         </button>
                         <h2 class="font-bold text-lg text-slate-700">学習レポート</h2>
-                    </div>
+                    </header>
 
-                    <div class="p-6 overflow-y-auto pb-10">
-                        <div class="grid grid-cols-2 gap-3 mb-6">
+                    <section class="report-summary header p-6">
+                        <div class="grid grid-cols-2 gap-3">
                             <div class="bg-indigo-600 text-white p-4 rounded-2xl shadow-md col-span-2">
                                 <div class="text-xs text-indigo-200 mb-1">累計獲得スコア</div>
                                 <div class="text-3xl font-black">${totalScore.toLocaleString()}</div>
@@ -471,21 +958,18 @@
                                 <div class="text-xl font-bold text-slate-700">${playCount}回</div>
                             </div>
                         </div>
+                    </section>
 
-                        <h3 class="font-bold text-slate-600 mb-3 flex items-center gap-2 text-sm">
-                            <i data-lucide="trophy" class="w-4 h-4 text-yellow-500"></i>
-                            項目別ハイスコア
-                        </h3>
-                        <div class="space-y-2">
-                            ${scoreListHtml}
-                        </div>
-                    </div>
+                    <section class="grade-selector header px-6 pb-2"></section>
+
+                    <main class="grammar-list content px-6 pb-10"></main>
                 </div>
             `;
         }
 
         function renderGame() {
             const { timeLeft, score, combo, selectedIndices, shuffledChunks, isCorrect } = state.game;
+            const jpText = state.game.currentQ?.jp || '';
 
             let answerBoxClass = 'border-indigo-100';
             if (isCorrect === true) answerBoxClass = 'border-green-400 bg-green-50';
@@ -540,6 +1024,12 @@
 
                 <!-- Main Game Area -->
                 <div class="flex-1 flex flex-col bg-slate-50">
+                    <!-- Japanese Translation -->
+                    <div class="px-4 pt-4">
+                        <div class="bg-indigo-50 border border-indigo-100 text-indigo-700 rounded-2xl px-4 py-3 text-center font-bold">
+                            ${jpText}
+                        </div>
+                    </div>
                     <!-- Combo -->
                     <div class="h-10 flex justify-center items-end pb-2">
                         ${combo > 1 ? `
