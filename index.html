@@ -1344,6 +1344,7 @@
         const state = {
             view: 'start', // start, menu, grade_select, course_select, countdown, history, game, result
             selectedGrade: '中学2年',
+            mode: 'normal', // normal, review2
             userData: { nickname: '', totalScore: 0, history: [], bestScores: {} },
             game: {
                 activeCourseId: null,
@@ -1437,6 +1438,7 @@
             switch(state.view) {
                 case 'start': renderStart(); break;
                 case 'menu': renderMenu(); break;
+                case 'review_grade_select': renderReviewGradeSelect(); break;
                 case 'grade_select': renderGradeSelect(); break;
                 case 'course_select': renderCourseSelect(); break;
                 case 'countdown': renderCountdown(); break;
@@ -1515,6 +1517,17 @@
                             </div>
                             <div class="relative z-10 opacity-80 text-sm">文法を選んでノック開始</div>
                             <i data-lucide="dumbbell" class="absolute -bottom-4 -right-4 w-32 h-32 text-indigo-500 opacity-30 transform rotate-12 group-hover:scale-110 transition-transform duration-500"></i>
+                        </button>
+
+                        <button onclick="goReviewGradeSelect()" class="w-full bg-white text-slate-700 p-6 rounded-3xl shadow-md border-2 border-emerald-100 hover:border-emerald-300 transition-all group relative overflow-hidden text-left h-32 flex flex-col justify-between">
+                            <div class="relative z-10">
+                                <div class="text-emerald-500 font-bold text-sm mb-1">REVIEW</div>
+                                <div class="text-2xl font-extrabold flex items-center gap-2">
+                                    総復習
+                                    <i data-lucide="chevron-right" class="w-5 h-5 group-hover:translate-x-1 transition-transform"></i>
+                                </div>
+                            </div>
+                            <i data-lucide="repeat" class="absolute -bottom-4 -right-4 w-24 h-24 text-emerald-100 opacity-70 transform rotate-12 group-hover:scale-110 transition-transform duration-500"></i>
                         </button>
 
                         <button onclick="state.view = 'history'; render();" class="w-full bg-white text-slate-700 p-6 rounded-3xl shadow-md border-2 border-indigo-100 hover:border-indigo-300 transition-all group relative overflow-hidden text-left h-32 flex flex-col justify-between">
@@ -1903,11 +1916,63 @@
             state.view = 'course_select';
             render();
         }
+
+        function goReviewGradeSelect() {
+            state.view = 'review_grade_select';
+            render();
+        }
+
+        function startReview2() {
+            state.selectedGrade = '中学2年';
+            state.mode = 'review2';
+            prepareGame('review2');
+        }
+
+        function renderReviewGradeSelect() {
+            const grades = ['中学1年', '中学2年', '中学3年'];
+            const gradeButtons = grades.map(grade => `
+                <button ${grade === '中学2年' ? 'onclick="startReview2()"' : ''} class="w-full bg-white p-5 rounded-2xl shadow-sm border-2 border-slate-100 hover:border-emerald-400 hover:shadow-md transition-all text-left group">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xl font-bold text-slate-700">${grade}</span>
+                        <div class="w-8 h-8 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                </button>
+            `).join('');
+
+            app.innerHTML = `
+                <div class="app-root bg-indigo-50">
+                    <header class="header bg-emerald-600 p-6 pt-8 pb-10 rounded-b-[2rem] shadow-lg mb-6 relative">
+                        <button onclick="goMenu()" class="absolute top-6 left-4 text-emerald-100 hover:text-white bg-emerald-700/50 p-2 rounded-full">
+                            <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                        </button>
+                        <div class="text-center">
+                            <h2 class="text-2xl font-bold text-white">総復習</h2>
+                            <p class="text-emerald-100 text-sm mt-1">学年を選んでください</p>
+                        </div>
+                    </header>
+                    <main class="content px-6 space-y-3 pb-8">
+                        ${gradeButtons}
+                    </main>
+                </div>
+            `;
+        }
         
         // Prepare Game: Setup state -> Countdown -> Start
         function prepareGame(courseId) {
-            const course = ENGLISH_KNOCK_CONTENT.find(c => c.id === courseId);
-            if (!course) return;
+            let questions = null;
+            if (courseId === 'review2') {
+                const pool = ENGLISH_KNOCK_CONTENT.filter(c => c.grade === '中学2年');
+                questions = pool.flatMap(c => c.questions);
+                state.mode = 'review2';
+            } else {
+                const course = ENGLISH_KNOCK_CONTENT.find(c => c.id === courseId);
+                if (!course) return;
+                questions = course.questions;
+                state.mode = 'normal';
+            }
+            if (!questions || questions.length === 0) return;
 
             // Initialize State
             state.game = {
@@ -1916,7 +1981,7 @@
                 score: 0,
                 combo: 0,
                 maxCombo: 0,
-                questionQueue: [...course.questions].sort(() => Math.random() - 0.5),
+                questionQueue: [...questions].sort(() => Math.random() - 0.5),
                 currentQ: null,
                 shuffledChunks: [],
                 selectedIndices: [],
