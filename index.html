@@ -105,6 +105,23 @@
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
         }
+
+        .wrong-overlay{
+            position: fixed;
+            inset: 0;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20vh;
+            font-weight: 900;
+            color: #dc2626;
+            z-index: 9999;
+            pointer-events: none;
+        }
+        .wrong-overlay.hidden{
+            display: none;
+        }
     </style>
 </head>
 <body class="bg-indigo-50 text-slate-800 min-h-screen flex justify-center items-center p-4 md:p-6">
@@ -1345,6 +1362,7 @@
             view: 'start', // start, menu, grade_select, course_select, countdown, history, game, result
             selectedGrade: '中学2年',
             mode: 'normal', // normal, review2
+            reviewContext: null,
             userData: { nickname: '', totalScore: 0, history: [], bestScores: {} },
             game: {
                 activeCourseId: null,
@@ -1353,6 +1371,7 @@
                 combo: 0,
                 maxCombo: 0,
                 questionQueue: [],
+                courseScores: null,
                 currentQ: null,
                 shuffledChunks: [],
                 selectedIndices: [],
@@ -1364,9 +1383,11 @@
 
         // Load data from localStorage
         const savedData = localStorage.getItem('english_knock_v3_data');
-        if (savedData) {
-            state.userData = { ...state.userData, ...JSON.parse(savedData) };
-        }
+            if (savedData) {
+                state.userData = { ...state.userData, ...JSON.parse(savedData) };
+            }
+
+            if (!state.userData.scoreLogs) state.userData.scoreLogs = [];
 
         /**
          * ------------------------------------------------------------------
@@ -1636,12 +1657,31 @@
             const totalHighScore = Object.values(state.userData.bestScores).reduce((a, b) => a + b, 0);
             const playCount = state.userData.history.length;
 
-            const grades = ['中学1年', '中学2年', '中学3年'];
-            if (!grades.includes(state.selectedGrade)) {
+            const gradeTabs = ['中学1年', '中学2年', '中学3年', '総復習'];
+            if (!gradeTabs.includes(state.selectedGrade)) {
                 state.selectedGrade = '中学2年';
             }
 
-            const gradeButtonsHtml = grades.map(grade => {
+            const bestSource = {};
+            (state.userData.scoreLogs || []).forEach(log => {
+                if (!log?.courseId || typeof log.score !== 'number') return;
+                const prev = bestSource[log.courseId];
+                if (!prev || log.score > prev.score || (log.score === prev.score && log.mode === 'review' && prev.mode !== 'review')) {
+                    bestSource[log.courseId] = { score: log.score, mode: log.mode, grade: log.grade };
+                }
+            });
+            const getReviewHighScoreByCourse = (courseId) => {
+                const logs = state.userData.scoreLogs || [];
+                const scores = logs.filter(log => log.mode === 'review' && log.courseId === courseId).map(log => log.score);
+                return scores.length ? Math.max(...scores) : 0;
+            };
+            const getReviewHighScoreByGrade = (grade) => {
+                const logs = state.userData.scoreLogs || [];
+                const scores = logs.filter(log => log.mode === 'review' && log.grade === grade).map(log => log.score);
+                return scores.length ? Math.max(...scores) : 0;
+            };
+
+            const gradeButtonsHtml = gradeTabs.map(grade => {
                 const isActive = state.selectedGrade === grade;
                 const btnClass = isActive
                     ? 'bg-indigo-600 text-white shadow-sm'
@@ -1653,22 +1693,42 @@
                 `;
             }).join('');
 
-            const scoreListHtml = ENGLISH_KNOCK_CONTENT
-                .filter(course => course.grade === state.selectedGrade)
-                .map(course => {
-                    const score = state.userData.bestScores[course.id];
-                    const scoreLabel = (score === undefined || score === 0) ? '未プレイ' : `${score.toLocaleString()} pt`;
+            const scoreListHtml = (state.selectedGrade === '総復習'
+                ? ['中学1年', '中学2年', '中学3年'].map(grade => {
+                    const reviewScore = getReviewHighScoreByGrade(grade);
+                    const scoreLabel = reviewScore === 0 ? '未プレイ' : `${reviewScore.toLocaleString()} pt`;
                     return `
                     <div class="bg-white p-3 rounded-xl border border-slate-100 flex justify-between items-center">
                         <div>
-                            <div class="text-xs text-indigo-500 font-bold">${course.grade}</div>
-                            <div class="font-bold text-slate-700 text-sm">${course.category}</div>
+                            <div class="text-xs text-indigo-500 font-bold">${grade}</div>
+                            <div class="font-bold text-slate-700 text-sm">総復習</div>
                         </div>
                         <div class="text-right">
                             <div class="font-bold ${scoreLabel === '未プレイ' ? 'text-slate-300 text-xs font-medium' : 'text-indigo-600'}">${scoreLabel}</div>
                         </div>
                     </div>`;
-                }).join('');
+                }).join('')
+                : ENGLISH_KNOCK_CONTENT.filter(course => course.grade === state.selectedGrade).map(course => {
+                    const normalScore = state.userData.bestScores[course.id] || 0;
+                    const reviewScore = getReviewHighScoreByCourse(course.id);
+                    const displayScore = Math.max(normalScore, reviewScore);
+                    const scoreLabel = displayScore === 0 ? '未プレイ' : `${displayScore.toLocaleString()} pt`;
+                    const source = bestSource[course.id];
+                    const reviewLabel = (reviewScore > normalScore && source?.mode === 'review' && source?.grade && source?.score === reviewScore)
+                        ? `<span class="ml-2 text-xs text-indigo-500 font-bold">総復習（${source.grade}）</span>`
+                        : '';
+                    return `
+                    <div class="bg-white p-3 rounded-xl border border-slate-100 flex justify-between items-center">
+                        <div>
+                            <div class="text-xs text-indigo-500 font-bold">${course.grade}</div>
+                            <div class="font-bold text-slate-700 text-sm">${course.category}${reviewLabel}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-bold ${scoreLabel === '未プレイ' ? 'text-slate-300 text-xs font-medium' : 'text-indigo-600'}">${scoreLabel}</div>
+                        </div>
+                    </div>`;
+                }).join('')
+            );
 
             if (!document.querySelector('.report-root')) {
                 initReportLayout();
@@ -1771,6 +1831,7 @@
             }).join('');
 
             app.innerHTML = `
+                <div id="wrong-overlay" class="wrong-overlay hidden">×</div>
                 <!-- Header Bar -->
                 <div class="bg-white px-4 py-3 shadow-sm flex justify-between items-center sticky top-0 z-20">
                     <button onclick="confirmExitGame()" class="p-2 -ml-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100">
@@ -1930,6 +1991,11 @@
 
         function renderReviewGradeSelect() {
             const grades = ['中学1年', '中学2年', '中学3年'];
+            const getReviewHighScoreByGrade = (grade) => {
+                const logs = state.userData.scoreLogs || [];
+                const scores = logs.filter(log => log.mode === 'review' && log.grade === grade).map(log => log.score);
+                return scores.length ? Math.max(...scores) : 0;
+            };
             const gradeButtons = grades.map(grade => `
                 <button ${grade === '中学2年' ? 'onclick="startReview2()"' : ''} class="w-full bg-white p-5 rounded-2xl shadow-sm border-2 border-slate-100 hover:border-emerald-400 hover:shadow-md transition-all text-left group">
                     <div class="flex justify-between items-center">
@@ -1937,6 +2003,12 @@
                         <div class="w-8 h-8 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center group-hover:bg-emerald-500 group-hover:text-white transition-colors">
                             <i data-lucide="arrow-right" class="w-4 h-4"></i>
                         </div>
+                    </div>
+                    <div class="text-right mt-2">
+                        ${getReviewHighScoreByGrade(grade) > 0
+                            ? `<div class="font-bold text-indigo-600">${getReviewHighScoreByGrade(grade).toLocaleString()} pt</div>`
+                            : `<div class="text-xs text-slate-300 font-medium">未プレイ</div>`
+                        }
                     </div>
                 </button>
             `).join('');
@@ -1962,26 +2034,32 @@
         // Prepare Game: Setup state -> Countdown -> Start
         function prepareGame(courseId) {
             let questions = null;
+            let courseScores = null;
             if (courseId === 'review2') {
                 const pool = ENGLISH_KNOCK_CONTENT.filter(c => c.grade === '中学2年');
-                questions = pool.flatMap(c => c.questions);
+                questions = pool.flatMap(c => c.questions.map(q => ({ ...q, courseId: c.id })));
+                courseScores = {};
                 state.mode = 'review2';
+                state.reviewContext = { enabled: true, grade: '中学2年' };
             } else {
                 const course = ENGLISH_KNOCK_CONTENT.find(c => c.id === courseId);
                 if (!course) return;
-                questions = course.questions;
+                questions = course.questions.map(q => ({ ...q, courseId: courseId }));
                 state.mode = 'normal';
+                state.reviewContext = null;
             }
             if (!questions || questions.length === 0) return;
 
             // Initialize State
+            const gameDuration = state.mode === 'review2' ? 90 : 60;
             state.game = {
                 activeCourseId: courseId,
-                timeLeft: 60,
+                timeLeft: gameDuration,
                 score: 0,
                 combo: 0,
                 maxCombo: 0,
                 questionQueue: [...questions].sort(() => Math.random() - 0.5),
+                courseScores,
                 currentQ: null,
                 shuffledChunks: [],
                 selectedIndices: [],
@@ -2090,7 +2168,12 @@
 
                 const timeBonus = Math.max(10, Math.floor(150 - (elapsed * 5)));
                 const comboBonus = Math.min(50, state.game.combo * 10);
-                state.game.score += (timeBonus + comboBonus);
+                const gained = timeBonus + comboBonus;
+                state.game.score += gained;
+                if (state.game.courseScores && state.game.currentQ?.courseId) {
+                    const cid = state.game.currentQ.courseId;
+                    state.game.courseScores[cid] = (state.game.courseScores[cid] || 0) + gained;
+                }
                 state.game.combo++;
                 if (state.game.combo > state.game.maxCombo) state.game.maxCombo = state.game.combo;
 
@@ -2109,6 +2192,14 @@
                 state.game.combo = 0;
                 renderGame();
 
+                const overlay = document.getElementById('wrong-overlay');
+                if (overlay) {
+                    overlay.classList.remove('hidden');
+                    setTimeout(() => {
+                        overlay.classList.add('hidden');
+                    }, 500);
+                }
+
                 setTimeout(() => {
                     if (state.view !== 'game') return; // Exit if game finished
                     state.game.selectedIndices = [];
@@ -2123,8 +2214,15 @@
             state.game.timerInterval = null; // Clear ref
             
             state.userData.totalScore += state.game.score;
-            const currentBest = state.userData.bestScores[state.game.activeCourseId] || 0;
-            state.userData.bestScores[state.game.activeCourseId] = Math.max(currentBest, state.game.score);
+            if (state.mode === 'review2' && state.game.courseScores) {
+                Object.entries(state.game.courseScores).forEach(([courseId, score]) => {
+                    const currentBest = state.userData.bestScores[courseId] || 0;
+                    state.userData.bestScores[courseId] = Math.max(currentBest, score);
+                });
+            } else {
+                const currentBest = state.userData.bestScores[state.game.activeCourseId] || 0;
+                state.userData.bestScores[state.game.activeCourseId] = Math.max(currentBest, state.game.score);
+            }
             
             state.userData.history.unshift({
                 date: new Date().toISOString(),
@@ -2133,6 +2231,15 @@
                 maxCombo: state.game.maxCombo
             });
             if (state.userData.history.length > 50) state.userData.history.pop();
+
+            state.userData.scoreLogs.push({
+                courseId: state.game.activeCourseId,
+                score: state.game.score,
+                mode: state.reviewContext ? 'review' : 'normal',
+                grade: state.reviewContext?.grade ?? null,
+                timestamp: Date.now()
+            });
+            if (state.userData.scoreLogs.length > 200) state.userData.scoreLogs.shift();
             
             saveData();
             
