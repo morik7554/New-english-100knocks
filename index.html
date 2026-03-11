@@ -3440,12 +3440,29 @@
         ];
 
         const RANKS = [
-            { min: 0, title: '練習生', icon: '🌱', color: 'text-green-500' },
-            { min: 500, title: '初心者', icon: '🐣', color: 'text-yellow-500' },
-            { min: 1500, title: 'ルーキー', icon: '🥉', color: 'text-orange-500' },
-            { min: 3000, title: '熟練者', icon: '🥈', color: 'text-slate-400' },
-            { min: 5000, title: 'エース', icon: '🥇', color: 'text-yellow-400' },
-            { min: 10000, title: '神様', icon: '☀️', color: 'text-rose-500' },
+            { min: 0, title: 'スタート', icon: '🌱', color: '#9ca3af' },
+            { min: 2000, title: 'ウォームアップ', icon: '🔥', color: '#f59e0b' },
+            { min: 4000, title: '学習スタート', icon: '📘', color: '#60a5fa' },
+            { min: 7000, title: 'ちょっと分かる', icon: '🙂', color: '#34d399' },
+            { min: 10000, title: '調子いい', icon: '😄', color: '#22c55e' },
+            { min: 14000, title: '成長中', icon: '📈', color: '#10b981' },
+            { min: 18000, title: 'できる人', icon: '👏', color: '#06b6d4' },
+            { min: 23000, title: '実力者', icon: '💪', color: '#3b82f6' },
+            { min: 29000, title: 'かなり強い', icon: '⚡', color: '#6366f1' },
+            { min: 35000, title: 'クラス上位', icon: '🏅', color: '#8b5cf6' },
+            { min: 42000, title: '英語得意', icon: '🎯', color: '#a855f7' },
+            { min: 50000, title: '英語強者', icon: '🛡️', color: '#d946ef' },
+            { min: 59000, title: '英語エキスパート', icon: '🎓', color: '#ec4899' },
+            { min: 69000, title: '英語マスター', icon: '👑', color: '#f43f5e' },
+            { min: 80000, title: '英語ガチ勢', icon: '🚀', color: '#ef4444' },
+            { min: 92000, title: '英語レジェンド', icon: '🌟', color: '#f97316' },
+            { min: 105000, title: '英語の英雄', icon: '🏆', color: '#eab308' },
+            { min: 120000, title: '英語の伝説', icon: '💎', color: '#14b8a6' },
+            { min: 135000, title: '英語の神', icon: '☀️', color: '#0ea5e9' },
+            { min: 150000, title: '殿堂入り', icon: '🏛️', color: '#facc15' },
+            { min: 180000, title: '英語界の神話', icon: '🌌', color: '#8b5cf6' },
+            { min: 220000, title: '英語界の創世神', icon: '✨', color: '#7c3aed' },
+            { min: 260000, title: '英語という概念', icon: '🧠', color: '#6d28d9' },
         ];
 
         /**
@@ -3541,6 +3558,23 @@
             return [...RANKS].reverse().find(r => score >= r.min) || RANKS[0];
         }
 
+        function getNextRankInfo() {
+            const score = state.userData.totalScore;
+            const nextRank = RANKS.find(rank => score < rank.min);
+
+            if (!nextRank) {
+                return {
+                    nextRank: null,
+                    pointsNeeded: 0
+                };
+            }
+
+            return {
+                nextRank,
+                pointsNeeded: nextRank.min - score
+            };
+        }
+
         /**
          * ------------------------------------------------------------------
          * RENDER FUNCTIONS
@@ -3609,17 +3643,31 @@
 
         function renderMenu() {
             const rank = getCurrentRank();
+            const nextRankInfo = getNextRankInfo();
             app.innerHTML = `
                 <div class="flex-1 flex flex-col p-6 bg-indigo-50">
                     <!-- User Header -->
-                    <div class="flex justify-between items-center mb-8 bg-white p-4 rounded-2xl shadow-sm border border-indigo-100">
-                        <div>
-                            <div class="text-xs text-slate-400 font-bold">Welcome</div>
-                            <div class="text-xl font-black text-slate-700">${state.userData.nickname}</div>
+                    <div class="mb-8 bg-white p-4 rounded-2xl shadow-sm border border-indigo-100">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="text-xs text-slate-400 font-bold">Welcome</div>
+                                <div class="text-xl font-black text-slate-700">${state.userData.nickname}</div>
+                            </div>
+                            <div class="bg-indigo-50 px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1 text-indigo-600">
+                                <span class="text-lg">${rank.icon}</span>
+                                <span>${rank.title}</span>
+                            </div>
                         </div>
-                        <div class="bg-indigo-50 px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1 text-indigo-600">
-                            <span class="text-lg">${rank.icon}</span>
-                            <span>${rank.title}</span>
+                        <div class="mt-4 bg-indigo-50 rounded-xl p-4 border border-indigo-100">
+                            <div class="text-xs text-slate-400 font-bold">RANK INFO</div>
+                            <div class="text-lg font-black text-slate-700">Rank: ${rank.title}</div>
+                            <div class="text-base font-bold text-slate-600 mt-1">Score: ${state.userData.totalScore.toLocaleString()}</div>
+                            ${nextRankInfo.nextRank ? `
+                                <div class="text-sm text-slate-500 mt-3">次のランク（${nextRankInfo.nextRank.title}）まで</div>
+                                <div class="text-lg font-extrabold text-indigo-600">あと ${nextRankInfo.pointsNeeded.toLocaleString()} 点</div>
+                            ` : `
+                                <div class="text-sm text-slate-500 mt-3">最高ランク到達済み</div>
+                            `}
                         </div>
                     </div>
 
@@ -3998,18 +4046,18 @@
                     </div>
 
                     <!-- Controls -->
-                    <div class="p-4 flex justify-center pb-8">
+                    <div class="p-4 flex justify-center gap-16 pb-8">
                         <button 
                             onclick="handleUndo()"
                             ${selectedIndices.length === 0 ? 'disabled style="opacity:0.3"' : ''}
-                            class="flex items-center gap-2 px-6 py-3 rounded-full font-bold text-slate-500 hover:bg-slate-200 transition-colors"
+                            class="flex items-center gap-2 px-6 py-3 rounded-full font-bold text-white bg-green-500 hover:bg-green-600 transition-colors"
                         >
                             <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
                             1つ戻す
                         </button>
                         <button 
                             onclick="confirmExitGame()"
-                            class="ml-3 flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-white bg-red-500 hover:bg-red-600 transition-colors text-sm"
+                            class="flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-white bg-red-500 hover:bg-red-600 transition-colors text-sm"
                         >
                             <i data-lucide="log-out" class="w-4 h-4"></i>
                             やめる
