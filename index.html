@@ -3758,7 +3758,7 @@
         }
 
         function renderGradeSelect() {
-            const grades = ['中学2年'];
+            const grades = [...new Set(ENGLISH_KNOCK_CONTENT.map(c => c.grade))].filter(g => g !== '総復習');
             const gradeButtons = grades.map(grade => `
                 <button onclick="selectGrade('${grade}')" class="w-full bg-white p-5 rounded-2xl shadow-sm border-2 border-slate-100 hover:border-indigo-400 hover:shadow-md transition-all text-left group">
                     <div class="flex justify-between items-center">
@@ -3861,7 +3861,7 @@
             const totalHighScore = Object.values(state.userData.bestScores).reduce((a, b) => a + b, 0);
             const playCount = state.userData.history.length;
 
-            const gradeTabs = ['中学2年', '総復習'];
+            const gradeTabs = ['中学1年', '中学2年', '中学3年', '総復習'];
             if (!gradeTabs.includes(state.selectedGrade)) {
                 state.selectedGrade = '中学2年';
             }
@@ -3899,7 +3899,7 @@
 
             const scoreListHtml = (state.selectedGrade === '総復習'
                 ? [
-                    ...['中学2年'].map(grade => {
+                    ...['中学1年', '中学2年', '中学3年'].map(grade => {
                     const reviewScore = getReviewHighScoreByGrade(grade);
                     const scoreLabel = reviewScore === 0 ? '未プレイ' : `${reviewScore.toLocaleString()} pt`;
                     return `
@@ -3913,6 +3913,23 @@
                         </div>
                     </div>`;
                     }),
+                    (() => {
+                        const examCourseId = 'g3_exam_composite';
+                        const normalScore = state.userData.bestScores[examCourseId] || 0;
+                        const reviewScore = getReviewHighScoreByCourse(examCourseId);
+                        const displayScore = Math.max(normalScore, reviewScore);
+                        const scoreLabel = displayScore === 0 ? '未プレイ' : `${displayScore.toLocaleString()} pt`;
+                        return `
+                    <div class="bg-white p-3 rounded-xl border border-slate-100 flex justify-between items-center">
+                        <div>
+                            <div class="text-xs text-indigo-500 font-bold">総復習</div>
+                            <div class="font-bold text-slate-700 text-sm">入試実戦</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-bold ${scoreLabel === '未プレイ' ? 'text-slate-300 text-xs font-medium' : 'text-indigo-600'}">${scoreLabel}</div>
+                        </div>
+                    </div>`;
+                    })()
                 ].join('')
                 : ENGLISH_KNOCK_CONTENT.filter(course => course.grade === state.selectedGrade).map(course => {
                     const normalScore = state.userData.bestScores[course.id] || 0;
@@ -4195,15 +4212,37 @@
             prepareGame('review2');
         }
 
+        function startReview1() {
+            state.selectedGrade = '中学1年';
+            state.mode = 'review1';
+            prepareGame('review1');
+        }
+
+        function startReview3() {
+            state.selectedGrade = '中学3年';
+            state.mode = 'review3';
+            prepareGame('review3');
+        }
+
+        function startReviewExam() {
+            state.selectedGrade = '総復習';
+            state.mode = 'normal';
+            prepareGame('g3_exam_composite');
+        }
+
         function renderReviewGradeSelect() {
-            const grades = ['中学2年'];
+            const grades = ['中学1年', '中学2年', '中学3年'];
             const getReviewHighScoreByGrade = (grade) => {
                 const logs = state.userData.scoreLogs || [];
                 const scores = logs.filter(log => log.mode === 'review' && log.grade === grade).map(log => log.score);
                 return scores.length ? Math.max(...scores) : 0;
             };
             const gradeButtons = grades.map(grade => `
-                <button onclick="startReview2()" class="w-full bg-white p-5 rounded-2xl shadow-sm border-2 border-slate-100 hover:border-emerald-400 hover:shadow-md transition-all text-left group">
+                <button ${
+                    grade === '中学1年' ? 'onclick="startReview1()"' :
+                    grade === '中学2年' ? 'onclick="startReview2()"' :
+                    grade === '中学3年' ? 'onclick="startReview3()"' : ''
+                } class="w-full bg-white p-5 rounded-2xl shadow-sm border-2 border-slate-100 hover:border-emerald-400 hover:shadow-md transition-all text-left group">
                     <div class="flex justify-between items-center">
                         <span class="text-xl font-bold text-slate-700">${grade}</span>
                         <div class="w-8 h-8 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center group-hover:bg-emerald-500 group-hover:text-white transition-colors">
@@ -4232,6 +4271,17 @@
                     </header>
                     <main class="content px-6 space-y-3 pb-8">
                         ${gradeButtons}
+                        <button onclick="startReviewExam()" class="w-full bg-white p-5 rounded-2xl shadow-sm border-2 border-slate-100 hover:border-emerald-400 hover:shadow-md transition-all text-left group">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xl font-bold text-slate-700">入試実戦</span>
+                                <div class="w-8 h-8 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                                </div>
+                            </div>
+                            <div class="text-right mt-2">
+                                <div class="text-xs text-slate-400 font-medium">総復習</div>
+                            </div>
+                        </button>
                     </main>
                 </div>
             `;
@@ -4241,9 +4291,11 @@
         function prepareGame(courseId) {
             let questions = null;
             let courseScores = null;
-            if (courseId === 'review2') {
+            if (courseId === 'review1' || courseId === 'review2' || courseId === 'review3') {
                 const gradeMap = {
-                    review2: '中学2年'
+                    review1: '中学1年',
+                    review2: '中学2年',
+                    review3: '中学3年'
                 };
                 const selectedReviewGrade = gradeMap[courseId];
                 const pool = ENGLISH_KNOCK_CONTENT.filter(c => c.grade === selectedReviewGrade);
@@ -4261,7 +4313,7 @@
             if (!questions || questions.length === 0) return;
 
             // Initialize State
-            const gameDuration = state.mode === 'review2' ? 90 : 60;
+            const gameDuration = (state.mode === 'review1' || state.mode === 'review2' || state.mode === 'review3') ? 90 : 60;
             state.game = {
                 activeCourseId: courseId,
                 timeLeft: gameDuration,
