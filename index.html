@@ -3708,17 +3708,69 @@
             '中学2年': ['g3_passive', 'g3_svoc_call_make_name', 'g3_let_help_person_verb']
         };
 
+        const RANKING_CONFIG = {
+            endpointStorageKey: 'english_knock_v3_ranking_endpoint',
+            anonymousIdStorageKey: 'english_knock_v3_anonymous_id',
+            adminTokenStorageKey: 'english_knock_v3_admin_token',
+            overallLimit: 50,
+            courseLimit: 30,
+            gradeTabs: ['全体', '中学1年', '中学2年', '中学3年']
+        };
+
+        const NICKNAME_RULES = {
+            minLength: 2,
+            maxLength: 12,
+            bannedPatterns: [
+                /死ね/i,
+                /しね/i,
+                /sex/i,
+                /sexy/i,
+                /ちんこ/i,
+                /まんこ/i,
+                /おっぱい/i,
+                /fuck/i,
+                /shit/i,
+                /bitch/i
+            ],
+            personalInfoPatterns: [
+                /@/,
+                /https?:\/\//i,
+                /\d{7,}/,
+                /学校|小学校|中学校|高校|大学|クラス|組|出席番号|電話|line|インスタ|instagram|tiktok|住所|本名/i
+            ]
+        };
+
         /**
          * ------------------------------------------------------------------
          * STATE MANAGEMENT
          * ------------------------------------------------------------------
          */
         const state = {
-            view: 'start', // start, menu, grade_select, course_select, countdown, history, game, result, mistake_review
+            view: 'start', // start, menu, grade_select, course_select, countdown, history, leaderboard, leaderboard_admin, game, result, mistake_review
             selectedGrade: '中学2年',
             mode: 'normal', // normal, review2
             reviewContext: null,
+            ui: {
+                nicknameError: ''
+            },
             userData: { nickname: '', totalScore: 0, history: [], bestScores: {} },
+            ranking: {
+                endpoint: '',
+                entries: [],
+                loading: false,
+                syncMessage: '',
+                lastSyncAt: null,
+                scope: 'overall',
+                selectedGrade: '中学1年',
+                selectedCourseId: null,
+                adminToken: '',
+                adminEntries: [],
+                adminLoading: false,
+                adminMessage: '',
+                adminScope: 'overall',
+                adminSelectedGrade: '中学1年',
+                adminSelectedCourseId: null
+            },
             game: {
                 activeCourseId: null,
                 timeLeft: 60,
@@ -3744,6 +3796,11 @@
             }
 
             if (!state.userData.scoreLogs) state.userData.scoreLogs = [];
+            if (!state.userData.anonymousId) {
+                state.userData.anonymousId = loadOrCreateAnonymousId();
+            }
+            state.ranking.endpoint = localStorage.getItem(RANKING_CONFIG.endpointStorageKey) || '';
+            state.ranking.adminToken = localStorage.getItem(RANKING_CONFIG.adminTokenStorageKey) || '';
 
         /**
          * ------------------------------------------------------------------
@@ -3795,6 +3852,283 @@
             localStorage.setItem('english_knock_v3_data', JSON.stringify(state.userData));
         }
 
+        function loadOrCreateAnonymousId() {
+            const existing = localStorage.getItem(RANKING_CONFIG.anonymousIdStorageKey);
+            if (existing) return existing;
+            const created = `player-${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`;
+            localStorage.setItem(RANKING_CONFIG.anonymousIdStorageKey, created);
+            return created;
+        }
+
+        function getRankingEndpoint() {
+            return (state.ranking.endpoint || '').trim();
+        }
+
+        function hasRankingEndpoint() {
+            return !!getRankingEndpoint();
+        }
+
+        function saveRankingEndpoint(endpoint) {
+            state.ranking.endpoint = endpoint.trim();
+            localStorage.setItem(RANKING_CONFIG.endpointStorageKey, state.ranking.endpoint);
+        }
+
+        function saveAdminToken(token) {
+            state.ranking.adminToken = token.trim();
+            localStorage.setItem(RANKING_CONFIG.adminTokenStorageKey, state.ranking.adminToken);
+        }
+
+        function hasAdminToken() {
+            return !!(state.ranking.adminToken || '').trim();
+        }
+
+        function normalizeNickname(name) {
+            return String(name || '').trim().replace(/\s+/g, ' ');
+        }
+
+        function validateNickname(name) {
+            const normalized = normalizeNickname(name);
+            if (normalized.length < NICKNAME_RULES.minLength) {
+                return `ニックネームは${NICKNAME_RULES.minLength}文字以上にしてください。`;
+            }
+            if (normalized.length > NICKNAME_RULES.maxLength) {
+                return `ニックネームは${NICKNAME_RULES.maxLength}文字以内にしてください。`;
+            }
+            if (NICKNAME_RULES.bannedPatterns.some(pattern => pattern.test(normalized))) {
+                return '不適切な言葉は使えません。';
+            }
+            if (NICKNAME_RULES.personalInfoPatterns.some(pattern => pattern.test(normalized))) {
+                return '個人情報や個人を特定できる名前は使えません。';
+            }
+            return '';
+        }
+
+        function getRankableCoursesByGrade(grade) {
+            return ENGLISH_KNOCK_CONTENT.filter(course => course.grade === grade);
+        }
+
+        function getCourseMeta(courseId) {
+            return ENGLISH_KNOCK_CONTENT.find(course => course.id === courseId) || null;
+        }
+
+        function getCourseLabel(courseId) {
+            if (courseId === 'review1') return '総復習（中1）';
+            if (courseId === 'review2') return '総復習（中2）';
+            if (courseId === 'review3') return '総復習（中3）';
+            const course = getCourseMeta(courseId);
+            return course ? course.category : 'トレーニング';
+        }
+
+        function formatSyncTime(value) {
+            if (!value) return '';
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return '';
+            return date.toLocaleString('ja-JP', {
+                month: 'numeric',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function getRankingRequestInfo() {
+            if (state.ranking.scope === 'course' && state.ranking.selectedCourseId) {
+                return {
+                    mode: 'course',
+                    limit: RANKING_CONFIG.courseLimit,
+                    courseId: state.ranking.selectedCourseId
+                };
+            }
+            return {
+                mode: 'overall',
+                limit: RANKING_CONFIG.overallLimit,
+                courseId: null
+            };
+        }
+
+        function setRankingScope(scope, grade = state.ranking.selectedGrade, courseId = null) {
+            state.ranking.scope = scope;
+            state.ranking.selectedGrade = grade;
+            state.ranking.selectedCourseId = courseId;
+        }
+
+        function setAdminScope(scope, grade = state.ranking.adminSelectedGrade, courseId = null) {
+            state.ranking.adminScope = scope;
+            state.ranking.adminSelectedGrade = grade;
+            state.ranking.adminSelectedCourseId = courseId;
+        }
+
+        async function fetchRankingEntries() {
+            if (!hasRankingEndpoint()) {
+                state.ranking.entries = [];
+                state.ranking.syncMessage = 'まだ接続先が未設定です。';
+                return;
+            }
+
+            state.ranking.loading = true;
+            state.ranking.syncMessage = 'ランキングを読み込み中...';
+            render();
+
+            try {
+                const requestInfo = getRankingRequestInfo();
+                const params = new URLSearchParams({
+                    mode: requestInfo.mode,
+                    limit: String(requestInfo.limit)
+                });
+                if (requestInfo.courseId) {
+                    params.set('courseId', requestInfo.courseId);
+                }
+                const url = `${getRankingEndpoint()}?${params.toString()}`;
+                const res = await fetch(url, { method: 'GET', cache: 'no-store' });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                state.ranking.entries = Array.isArray(data.entries) ? data.entries : [];
+                state.ranking.lastSyncAt = Date.now();
+                state.ranking.syncMessage = state.ranking.entries.length
+                    ? `最新取得: ${formatSyncTime(state.ranking.lastSyncAt)}`
+                    : 'まだランキング登録がありません。';
+            } catch (error) {
+                state.ranking.syncMessage = 'ランキングの取得に失敗しました。接続先URLを確認してください。';
+            } finally {
+                state.ranking.loading = false;
+                if (state.view === 'leaderboard') render();
+            }
+        }
+
+        async function submitRankingScore(force = false) {
+            if (!hasRankingEndpoint()) return false;
+
+            const totalScore = state.userData.totalScore || 0;
+            const lastSubmitted = state.userData.lastSubmittedRankingScore || 0;
+            const nicknameError = validateNickname(state.userData.nickname || '');
+            if (!force && totalScore <= 0) return false;
+            if (!force && totalScore <= lastSubmitted) return false;
+            if (nicknameError) {
+                state.ranking.syncMessage = `ランキング送信前にニックネームを修正してください。${nicknameError}`;
+                return false;
+            }
+
+            const courseBestScores = Object.entries(state.userData.bestScores || {})
+                .map(([courseId, bestScore]) => {
+                    const course = getCourseMeta(courseId);
+                    if (!course || !['中学1年', '中学2年', '中学3年'].includes(course.grade)) return null;
+                    return {
+                        courseId,
+                        grade: course.grade,
+                        category: course.category,
+                        bestScore: Number(bestScore || 0)
+                    };
+                })
+                .filter(entry => entry && entry.bestScore > 0);
+
+            const payload = {
+                anonymousId: state.userData.anonymousId,
+                nickname: (state.userData.nickname || 'Player').slice(0, 20),
+                totalScore,
+                rankTitle: getCurrentRank().title,
+                lastPlayedCourse: getCourseLabel(state.game.activeCourseId),
+                updatedAt: new Date().toISOString(),
+                courseBestScores
+            };
+
+            try {
+                const res = await fetch(getRankingEndpoint(), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                if (!data.ok) throw new Error(data.message || 'send failed');
+                state.userData.lastSubmittedRankingScore = totalScore;
+                saveData();
+                state.ranking.lastSyncAt = Date.now();
+                state.ranking.syncMessage = `送信完了: ${formatSyncTime(state.ranking.lastSyncAt)}`;
+                return true;
+            } catch (error) {
+                state.ranking.syncMessage = 'スコア送信に失敗しました。接続先URLまたはニックネームを確認してください。';
+                return false;
+            }
+        }
+
+        function getAdminRequestInfo() {
+            if (state.ranking.adminScope === 'course' && state.ranking.adminSelectedCourseId) {
+                return {
+                    mode: 'adminCourse',
+                    courseId: state.ranking.adminSelectedCourseId,
+                    limit: RANKING_CONFIG.courseLimit
+                };
+            }
+            return {
+                mode: 'adminOverall',
+                courseId: null,
+                limit: RANKING_CONFIG.overallLimit
+            };
+        }
+
+        async function fetchAdminRankingEntries() {
+            if (!hasRankingEndpoint()) {
+                state.ranking.adminEntries = [];
+                state.ranking.adminMessage = '先に接続先URLを設定してください。';
+                return;
+            }
+            if (!hasAdminToken()) {
+                state.ranking.adminEntries = [];
+                state.ranking.adminMessage = '管理用トークンを入力してください。';
+                return;
+            }
+
+            state.ranking.adminLoading = true;
+            state.ranking.adminMessage = '管理データを読み込み中...';
+            render();
+
+            try {
+                const requestInfo = getAdminRequestInfo();
+                const params = new URLSearchParams({
+                    mode: requestInfo.mode,
+                    limit: String(requestInfo.limit),
+                    adminToken: state.ranking.adminToken.trim()
+                });
+                if (requestInfo.courseId) params.set('courseId', requestInfo.courseId);
+                const res = await fetch(`${getRankingEndpoint()}?${params.toString()}`, { method: 'GET', cache: 'no-store' });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                if (!data.ok) throw new Error(data.message || 'admin fetch failed');
+                state.ranking.adminEntries = Array.isArray(data.entries) ? data.entries : [];
+                state.ranking.adminMessage = state.ranking.adminEntries.length ? '管理データを取得しました。' : 'データがありません。';
+            } catch (error) {
+                state.ranking.adminMessage = '管理データの取得に失敗しました。トークンかURLを確認してください。';
+            } finally {
+                state.ranking.adminLoading = false;
+                if (state.view === 'leaderboard_admin') render();
+            }
+        }
+
+        async function deleteRankingEntry(anonymousId) {
+            if (!hasRankingEndpoint() || !hasAdminToken() || !anonymousId) return;
+            state.ranking.adminMessage = '削除中...';
+            renderLeaderboardAdmin();
+            try {
+                const res = await fetch(getRankingEndpoint(), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        action: 'deletePlayer',
+                        adminToken: state.ranking.adminToken.trim(),
+                        anonymousId
+                    })
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                if (!data.ok) throw new Error(data.message || 'delete failed');
+                state.ranking.adminMessage = '削除しました。';
+                fetchAdminRankingEntries();
+            } catch (error) {
+                state.ranking.adminMessage = '削除に失敗しました。';
+                renderLeaderboardAdmin();
+            }
+        }
+
         // Helper: Get Rank
         function getCurrentRank() {
             const score = state.userData.totalScore;
@@ -3837,6 +4171,8 @@
                 case 'course_select': renderCourseSelect(); break;
                 case 'countdown': renderCountdown(); break;
                 case 'history': renderHistory(); break;
+                case 'leaderboard': renderLeaderboard(); break;
+                case 'leaderboard_admin': renderLeaderboardAdmin(); break;
                 case 'game': renderGame(); break;
                 case 'result': renderResult(); break;
                 case 'mistake_review': renderMistakeReview(); break;
@@ -3868,9 +4204,16 @@
                                 type="text" 
                                 id="nickname" 
                                 value="${val}"
+                                maxlength="${NICKNAME_RULES.maxLength}"
                                 placeholder="Player Name"
                                 class="w-full px-4 py-3 rounded-xl text-slate-800 font-bold mb-4 focus:outline-none focus:ring-4 focus:ring-indigo-400"
                             >
+                            ${state.ui.nicknameError ? `<div class="text-left text-sm font-bold text-yellow-200 mb-3">${state.ui.nicknameError}</div>` : ''}
+                            <div class="text-left text-xs text-indigo-100/90 space-y-1 mb-4">
+                                <p>・本名、学校名、クラス名、出席番号、SNS ID は使わないでください</p>
+                                <p>・不適切な名前は使えません</p>
+                                <p>・迷ったら個人が特定できない短いニックネームにしてください</p>
+                            </div>
                             <button 
                                 onclick="handleNicknameSubmit()"
                                 class="w-full bg-yellow-400 text-yellow-900 font-bold py-3 rounded-xl shadow-lg hover:bg-yellow-300 transform transition-all active:scale-95 flex items-center justify-center gap-2"
@@ -3948,6 +4291,17 @@
                                 </div>
                             </div>
                             <i data-lucide="bar-chart-3" class="absolute -bottom-4 -right-4 w-24 h-24 text-slate-200 opacity-50 transform rotate-12 group-hover:scale-110 transition-transform duration-500"></i>
+                        </button>
+
+                        <button onclick="openLeaderboard()" class="w-full bg-white text-slate-700 p-6 rounded-3xl shadow-md border-2 border-amber-100 hover:border-amber-300 transition-all group relative overflow-hidden text-left h-32 flex flex-col justify-between">
+                            <div class="relative z-10">
+                                <div class="text-amber-500 font-bold text-sm mb-1">TOP 50 / 30</div>
+                                <div class="text-2xl font-extrabold flex items-center gap-2">
+                                    ランキング
+                                    <i data-lucide="chevron-right" class="w-5 h-5 group-hover:translate-x-1 transition-transform"></i>
+                                </div>
+                            </div>
+                            <i data-lucide="medal" class="absolute -bottom-4 -right-4 w-24 h-24 text-amber-100 opacity-70 transform rotate-12 group-hover:scale-110 transition-transform duration-500"></i>
                         </button>
                     </div>
                     
@@ -4218,6 +4572,287 @@
             `;
         }
 
+        function renderLeaderboard() {
+            const endpoint = getRankingEndpoint();
+            const isOverall = state.ranking.scope === 'overall';
+            const currentCourse = state.ranking.selectedCourseId ? getCourseMeta(state.ranking.selectedCourseId) : null;
+            const gradeTabsHtml = RANKING_CONFIG.gradeTabs.map(tab => {
+                const isActive = (tab === '全体' && isOverall) || (tab !== '全体' && state.ranking.scope !== 'overall' && state.ranking.selectedGrade === tab);
+                const activeClass = isActive
+                    ? 'bg-amber-500 text-white shadow-sm'
+                    : 'bg-white text-amber-600 border border-amber-100 hover:bg-amber-50';
+                const onClick = tab === '全体'
+                    ? 'showOverallLeaderboard()'
+                    : `showGradeCourseList('${tab}')`;
+                return `<button onclick="${onClick}" class="px-4 py-2 rounded-xl text-sm font-bold transition-colors ${activeClass}">${tab === '全体' ? '全体' : tab.replace('中学', '')}</button>`;
+            }).join('');
+            const courseCardsHtml = getRankableCoursesByGrade(state.ranking.selectedGrade).map(course => {
+                const localBest = state.userData.bestScores[course.id] || 0;
+                return `
+                <button onclick="openCourseLeaderboard('${course.id}')" class="w-full bg-white border border-slate-100 rounded-2xl p-4 text-left hover:border-amber-300 hover:shadow-sm transition-all">
+                    <div class="flex justify-between items-start gap-3">
+                        <div>
+                            <div class="font-black text-slate-800">${course.category}</div>
+                            <div class="text-xs text-slate-400 mt-1">${course.description}</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <div class="text-[11px] text-slate-400">あなたの最高</div>
+                            <div class="font-black text-indigo-600">${localBest > 0 ? `${localBest.toLocaleString()} pt` : '--'}</div>
+                        </div>
+                    </div>
+                </button>`;
+            }).join('');
+            const entriesHtml = state.ranking.entries.length
+                ? state.ranking.entries.map((entry, index) => {
+                    const isMe = entry.anonymousId && entry.anonymousId === state.userData.anonymousId;
+                    const wrapperClass = isMe
+                        ? 'border-amber-300 bg-amber-50'
+                        : 'border-slate-100 bg-white';
+                    const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`;
+                    const scoreValue = Number(
+                        isOverall ? entry.totalScore || 0 : entry.bestScore || 0
+                    );
+                    return `
+                    <div class="rounded-2xl border p-4 flex items-center justify-between ${wrapperClass}">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-12 text-center font-black text-slate-700">${medal}</div>
+                            <div class="min-w-0">
+                                <div class="font-black text-slate-800 truncate">${entry.nickname || 'Player'}${isMe ? '（あなた）' : ''}</div>
+                                <div class="text-xs text-slate-400 truncate">${isOverall ? (entry.rankTitle || '') : (entry.grade || '')}</div>
+                            </div>
+                        </div>
+                        <div class="text-right pl-3">
+                            <div class="font-black text-lg text-indigo-600">${scoreValue.toLocaleString()}</div>
+                            <div class="text-[11px] text-slate-400">${formatSyncTime(entry.updatedAt)}</div>
+                        </div>
+                    </div>`;
+                }).join('')
+                : `
+                    <div class="rounded-2xl border border-dashed border-slate-200 bg-white p-6 text-center text-sm text-slate-400">
+                        ${hasRankingEndpoint() ? 'まだランキングデータがありません。' : 'まずは接続先URLを設定してください。'}
+                    </div>
+                `;
+            const listTitle = isOverall
+                ? `全体ランキング TOP ${RANKING_CONFIG.overallLimit}`
+                : `${currentCourse?.category || ''} ランキング TOP ${RANKING_CONFIG.courseLimit}`;
+            const heroSubtitle = isOverall
+                ? '累計スコアの全体ランキングです'
+                : state.ranking.selectedCourseId
+                    ? `${state.ranking.selectedGrade} の文法項目ランキングです`
+                    : `${state.ranking.selectedGrade} の文法項目を選んでください`;
+            const bodySection = isOverall
+                ? `
+                        <section class="bg-white rounded-3xl shadow-sm border border-slate-100 p-5">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="font-black text-slate-700 flex items-center gap-2">
+                                    <i data-lucide="trophy" class="w-5 h-5 text-amber-500"></i>
+                                    ${listTitle}
+                                </h3>
+                                ${state.ranking.loading ? '<div class="text-xs font-bold text-slate-400">読み込み中...</div>' : ''}
+                            </div>
+                            <div class="space-y-3">
+                                ${entriesHtml}
+                            </div>
+                        </section>
+                `
+                : state.ranking.selectedCourseId
+                    ? `
+                        <section class="bg-white rounded-3xl shadow-sm border border-slate-100 p-5">
+                            <div class="flex items-center justify-between mb-4">
+                                <div>
+                                    <div class="text-xs font-bold text-amber-500 mb-1">${state.ranking.selectedGrade}</div>
+                                    <h3 class="font-black text-slate-700">${listTitle}</h3>
+                                </div>
+                                <button onclick="showGradeCourseList('${state.ranking.selectedGrade}')" class="text-sm font-bold text-amber-600 hover:text-amber-700">項目一覧へ戻る</button>
+                            </div>
+                            <div class="space-y-3">
+                                ${entriesHtml}
+                            </div>
+                        </section>
+                    `
+                    : `
+                        <section class="bg-white rounded-3xl shadow-sm border border-slate-100 p-5">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="font-black text-slate-700 flex items-center gap-2">
+                                    <i data-lucide="book-open" class="w-5 h-5 text-amber-500"></i>
+                                    ${state.ranking.selectedGrade} の文法項目
+                                </h3>
+                                <div class="text-xs font-bold text-slate-400">項目を選ぶと TOP 30 を表示</div>
+                            </div>
+                            <div class="space-y-3">
+                                ${courseCardsHtml}
+                            </div>
+                        </section>
+                    `;
+
+            app.innerHTML = `
+                <div class="app-root bg-amber-50">
+                    <header class="header bg-amber-500 p-6 pt-8 pb-10 rounded-b-[2rem] shadow-lg mb-6 relative">
+                        <button onclick="goMenu()" class="absolute top-6 left-4 text-amber-50 hover:text-white bg-amber-600/50 p-2 rounded-full">
+                            <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                        </button>
+                        <div class="text-center">
+                            <div class="text-amber-100 text-xs font-bold tracking-wider">GLOBAL RANKING</div>
+                            <h2 class="text-2xl font-bold text-white">ランキング</h2>
+                            <p class="text-amber-100 text-sm mt-1">${heroSubtitle}</p>
+                        </div>
+                    </header>
+                    <main class="content px-6 pb-8 space-y-4">
+                        <section class="bg-white rounded-3xl shadow-sm border border-amber-100 p-5">
+                            <label class="block text-sm font-bold text-slate-700 mb-2" for="ranking-endpoint">接続先URL</label>
+                            <input
+                                id="ranking-endpoint"
+                                type="url"
+                                value="${endpoint}"
+                                placeholder="https://script.google.com/macros/s/....../exec"
+                                class="w-full px-4 py-3 rounded-xl border border-slate-200 font-medium text-slate-700 focus:outline-none focus:ring-4 focus:ring-amber-200"
+                            >
+                            <p class="text-xs text-slate-400 mt-2">Google Apps Script の Web アプリURLを入れると、外部ランキングが使えます。</p>
+                            <div class="mt-4 grid grid-cols-2 gap-3">
+                                <button onclick="saveLeaderboardEndpoint()" class="bg-amber-500 text-white font-bold py-3 rounded-xl hover:bg-amber-600 transition-colors">URLを保存</button>
+                                <button onclick="refreshLeaderboard()" class="bg-white text-amber-600 border border-amber-200 font-bold py-3 rounded-xl hover:bg-amber-50 transition-colors">最新を取得</button>
+                            </div>
+                            <div class="mt-3 text-xs font-bold ${hasRankingEndpoint() ? 'text-emerald-600' : 'text-slate-400'}">${state.ranking.syncMessage || (hasRankingEndpoint() ? 'URL保存済み' : '未設定')}</div>
+                        </section>
+
+                        <section class="bg-white rounded-3xl shadow-sm border border-slate-100 p-4">
+                            <div class="flex flex-wrap gap-2">
+                                ${gradeTabsHtml}
+                            </div>
+                        </section>
+
+                        ${bodySection}
+
+                        <section class="bg-white rounded-3xl shadow-sm border border-slate-100 p-5">
+                            <h3 class="font-black text-slate-700 mb-3 flex items-center gap-2">
+                                <i data-lucide="shield" class="w-5 h-5 text-indigo-500"></i>
+                                注意事項
+                            </h3>
+                            <div class="space-y-2 text-sm text-slate-500">
+                                <p>送信するのは <span class="font-bold text-slate-600">ニックネーム / スコア / ランク名 / 匿名ID / 更新日時</span> だけです。</p>
+                                <p>メールアドレスや本名は使いません。</p>
+                                <p>本名、学校名、クラス名、出席番号、SNS ID など個人が特定できる名前は禁止です。</p>
+                                <p>暴言、差別表現、下ネタなど不適切な言葉は禁止です。</p>
+                                <p>不適切な名前は管理画面から削除できるようにしています。</p>
+                            </div>
+                        </section>
+
+                        <div class="pt-4 pb-8 text-center">
+                            <button onclick="openLeaderboardAdmin()" class="text-[11px] text-slate-300 hover:text-slate-400 underline underline-offset-4">管理者用</button>
+                        </div>
+                    </main>
+                </div>
+            `;
+        }
+
+        function renderLeaderboardAdmin() {
+            const currentCourse = state.ranking.adminSelectedCourseId ? getCourseMeta(state.ranking.adminSelectedCourseId) : null;
+            const isOverall = state.ranking.adminScope === 'overall';
+            const gradeTabsHtml = RANKING_CONFIG.gradeTabs.map(tab => {
+                const isActive = (tab === '全体' && isOverall) || (tab !== '全体' && !isOverall && state.ranking.adminSelectedGrade === tab);
+                const activeClass = isActive
+                    ? 'bg-slate-900 text-white'
+                    : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50';
+                const onClick = tab === '全体'
+                    ? 'showAdminOverallLeaderboard()'
+                    : `showAdminGradeCourseList('${tab}')`;
+                return `<button onclick="${onClick}" class="px-4 py-2 rounded-xl text-sm font-bold transition-colors ${activeClass}">${tab === '全体' ? '全体' : tab.replace('中学', '')}</button>`;
+            }).join('');
+            const courseCardsHtml = getRankableCoursesByGrade(state.ranking.adminSelectedGrade).map(course => `
+                <button onclick="openAdminCourseLeaderboard('${course.id}')" class="w-full bg-white border border-slate-100 rounded-2xl p-4 text-left hover:border-slate-300 hover:shadow-sm transition-all">
+                    <div class="font-black text-slate-800">${course.category}</div>
+                    <div class="text-xs text-slate-400 mt-1">${course.description}</div>
+                </button>
+            `).join('');
+            const entriesHtml = state.ranking.adminEntries.length
+                ? state.ranking.adminEntries.map((entry, index) => {
+                    const scoreValue = Number(isOverall ? entry.totalScore || 0 : entry.bestScore || 0);
+                    return `
+                    <div class="rounded-2xl border border-slate-200 bg-white p-4">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <div class="font-black text-slate-800">#${index + 1} ${entry.nickname || 'Player'}</div>
+                                <div class="text-xs text-slate-400 break-all">${entry.anonymousId || ''}</div>
+                                <div class="text-xs text-slate-500 mt-1">${isOverall ? (entry.rankTitle || '') : `${entry.grade || ''} / ${entry.category || ''}`}</div>
+                            </div>
+                            <div class="text-right shrink-0">
+                                <div class="font-black text-lg text-indigo-600">${scoreValue.toLocaleString()}</div>
+                                <div class="text-[11px] text-slate-400">${formatSyncTime(entry.updatedAt)}</div>
+                                <button onclick="deleteRankingEntry('${entry.anonymousId}')" class="mt-2 px-3 py-2 rounded-lg bg-red-500 text-white text-xs font-bold hover:bg-red-600 transition-colors">この人を削除</button>
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('')
+                : `<div class="rounded-2xl border border-dashed border-slate-200 bg-white p-6 text-center text-sm text-slate-400">データがありません。</div>`;
+            const bodySection = isOverall
+                ? `
+                    <section class="bg-white rounded-3xl shadow-sm border border-slate-100 p-5">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="font-black text-slate-700">全体ランキング TOP ${RANKING_CONFIG.overallLimit}</h3>
+                            ${state.ranking.adminLoading ? '<div class="text-xs font-bold text-slate-400">読み込み中...</div>' : ''}
+                        </div>
+                        <div class="space-y-3">${entriesHtml}</div>
+                    </section>
+                `
+                : state.ranking.adminSelectedCourseId
+                    ? `
+                    <section class="bg-white rounded-3xl shadow-sm border border-slate-100 p-5">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="font-black text-slate-700">${currentCourse?.category || ''} TOP ${RANKING_CONFIG.courseLimit}</h3>
+                            <button onclick="showAdminGradeCourseList('${state.ranking.adminSelectedGrade}')" class="text-sm font-bold text-slate-600 hover:text-slate-800">項目一覧へ戻る</button>
+                        </div>
+                        <div class="space-y-3">${entriesHtml}</div>
+                    </section>
+                `
+                    : `
+                    <section class="bg-white rounded-3xl shadow-sm border border-slate-100 p-5">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-black text-slate-700">${state.ranking.adminSelectedGrade} の文法項目</h3>
+                            <div class="text-xs font-bold text-slate-400">項目を選ぶと管理用ランキングを表示</div>
+                        </div>
+                        <div class="space-y-3">${courseCardsHtml}</div>
+                    </section>
+                `;
+
+            app.innerHTML = `
+                <div class="app-root bg-slate-100">
+                    <header class="header bg-slate-900 p-6 pt-8 pb-10 rounded-b-[2rem] shadow-lg mb-6 relative">
+                        <button onclick="openLeaderboard()" class="absolute top-6 left-4 text-slate-100 hover:text-white bg-slate-700/50 p-2 rounded-full">
+                            <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                        </button>
+                        <div class="text-center">
+                            <div class="text-slate-300 text-xs font-bold tracking-wider">ADMIN PANEL</div>
+                            <h2 class="text-2xl font-bold text-white">ランキング管理画面</h2>
+                            <p class="text-slate-300 text-sm mt-1">不適切な名前や登録を削除できます</p>
+                        </div>
+                    </header>
+                    <main class="content px-6 pb-8 space-y-4">
+                        <section class="bg-white rounded-3xl shadow-sm border border-slate-200 p-5">
+                            <label class="block text-sm font-bold text-slate-700 mb-2" for="admin-token">管理用パスワード</label>
+                            <input
+                                id="admin-token"
+                                type="password"
+                                value="${state.ranking.adminToken || ''}"
+                                placeholder="Apps Script に設定した管理用パスワード"
+                                class="w-full px-4 py-3 rounded-xl border border-slate-200 font-medium text-slate-700 focus:outline-none focus:ring-4 focus:ring-slate-200"
+                            >
+                            <div class="mt-4 grid grid-cols-2 gap-3">
+                                <button onclick="saveAdminAccessToken()" class="bg-slate-900 text-white font-bold py-3 rounded-xl hover:bg-slate-800 transition-colors">パスワード保存</button>
+                                <button onclick="refreshAdminLeaderboard()" class="bg-white text-slate-700 border border-slate-200 font-bold py-3 rounded-xl hover:bg-slate-50 transition-colors">管理データ取得</button>
+                            </div>
+                            <div class="mt-3 text-xs font-bold ${hasAdminToken() ? 'text-emerald-600' : 'text-slate-400'}">${state.ranking.adminMessage || (hasAdminToken() ? 'パスワード保存済み' : '未設定')}</div>
+                        </section>
+
+                        <section class="bg-white rounded-3xl shadow-sm border border-slate-100 p-4">
+                            <div class="flex flex-wrap gap-2">${gradeTabsHtml}</div>
+                        </section>
+
+                        ${bodySection}
+                    </main>
+                </div>
+            `;
+        }
+
         function renderGame() {
             const { timeLeft, score, combo, selectedIndices, shuffledChunks, isCorrect } = state.game;
             const jpText = state.game.currentQ?.jp || '';
@@ -4385,10 +5020,136 @@
 
         function handleNicknameSubmit() {
             const input = document.getElementById('nickname');
-            const name = input.value.trim() || 'Player';
+            const name = normalizeNickname(input.value || '');
+            const error = validateNickname(name);
+            if (error) {
+                state.ui.nicknameError = error;
+                state.view = 'start';
+                render();
+                return;
+            }
+            state.ui.nicknameError = '';
             state.userData.nickname = name;
             saveData();
             goMenu();
+        }
+
+        function openLeaderboard() {
+            setRankingScope('overall', state.ranking.selectedGrade, null);
+            state.view = 'leaderboard';
+            render();
+            fetchRankingEntries();
+        }
+
+        function openLeaderboardAdmin() {
+            const password = window.prompt('管理用パスワードを入力してください');
+            if (!password) return;
+            if (password.trim() !== '4761') {
+                state.ranking.syncMessage = '管理用パスワードが違います。';
+                renderLeaderboard();
+                return;
+            }
+            saveAdminToken(password);
+            setAdminScope('overall', state.ranking.adminSelectedGrade, null);
+            state.view = 'leaderboard_admin';
+            render();
+            fetchAdminRankingEntries();
+        }
+
+        function showOverallLeaderboard() {
+            setRankingScope('overall', state.ranking.selectedGrade, null);
+            state.view = 'leaderboard';
+            render();
+            fetchRankingEntries();
+        }
+
+        function showGradeCourseList(grade) {
+            setRankingScope('grade', grade, null);
+            state.view = 'leaderboard';
+            state.ranking.entries = [];
+            state.ranking.loading = false;
+            render();
+        }
+
+        function showAdminOverallLeaderboard() {
+            setAdminScope('overall', state.ranking.adminSelectedGrade, null);
+            state.view = 'leaderboard_admin';
+            render();
+            fetchAdminRankingEntries();
+        }
+
+        function showAdminGradeCourseList(grade) {
+            setAdminScope('grade', grade, null);
+            state.view = 'leaderboard_admin';
+            state.ranking.adminEntries = [];
+            state.ranking.adminLoading = false;
+            render();
+        }
+
+        function openCourseLeaderboard(courseId) {
+            const course = getCourseMeta(courseId);
+            if (!course) return;
+            setRankingScope('course', course.grade, courseId);
+            state.view = 'leaderboard';
+            render();
+            fetchRankingEntries();
+        }
+
+        function openAdminCourseLeaderboard(courseId) {
+            const course = getCourseMeta(courseId);
+            if (!course) return;
+            setAdminScope('course', course.grade, courseId);
+            state.view = 'leaderboard_admin';
+            render();
+            fetchAdminRankingEntries();
+        }
+
+        function saveLeaderboardEndpoint() {
+            const input = document.getElementById('ranking-endpoint');
+            const endpoint = input?.value?.trim() || '';
+            if (!endpoint) {
+                state.ranking.syncMessage = 'URLを入力してください。';
+                renderLeaderboard();
+                return;
+            }
+            saveRankingEndpoint(endpoint);
+            state.ranking.syncMessage = 'URLを保存しました。';
+            renderLeaderboard();
+            if (state.ranking.scope === 'overall' || state.ranking.scope === 'course') {
+                fetchRankingEntries();
+            }
+        }
+
+        function refreshLeaderboard() {
+            if (state.ranking.scope === 'overall' || state.ranking.scope === 'course') {
+                fetchRankingEntries();
+            } else {
+                state.ranking.syncMessage = '文法項目を選ぶとランキングを取得できます。';
+                renderLeaderboard();
+            }
+        }
+
+        function saveAdminAccessToken() {
+            const input = document.getElementById('admin-token');
+            const token = input?.value?.trim() || '';
+            if (!token) {
+                state.ranking.adminMessage = '管理用パスワードを入力してください。';
+                renderLeaderboardAdmin();
+                return;
+            }
+            saveAdminToken(token);
+            state.ranking.adminMessage = '管理用パスワードを保存しました。';
+            renderLeaderboardAdmin();
+            fetchAdminRankingEntries();
+        }
+
+        function refreshAdminLeaderboard() {
+            if (state.ranking.adminScope === 'overall' || state.ranking.adminScope === 'course') {
+                fetchAdminRankingEntries();
+            } else {
+                state.ranking.adminMessage = '文法項目を選ぶと管理データを取得できます。';
+                renderLeaderboardAdmin();
+            }
         }
 
         function goMenu() {
@@ -4686,7 +5447,7 @@
             }
         }
 
-        function finishSession() {
+        async function finishSession() {
             if (state.game.timerInterval) clearInterval(state.game.timerInterval);
             state.game.timerInterval = null; // Clear ref
             
@@ -4719,6 +5480,7 @@
             if (state.userData.scoreLogs.length > 200) state.userData.scoreLogs.shift();
             
             saveData();
+            await submitRankingScore();
             
             state.view = 'mistake_review';
             render();
