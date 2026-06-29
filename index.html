@@ -132,6 +132,7 @@
     </div>
 
     <script src="data/questions.js"></script>
+    <script src="data/basic-sentences.js"></script>
 
     <script>
         const RANKS = [
@@ -186,8 +187,15 @@
             adminTokenStorageKey: 'english_knock_v3_admin_token',
             overallLimit: 50,
             courseLimit: 30,
-            gradeTabs: ['全体', '中学1年', '中学2年', '中学3年']
+            gradeTabs: ['全体', '中学1年', '中学2年', '中学3年', '基本文']
         };
+
+        const BASIC_SENTENCE_COURSES = [
+            { id: 'basic_g1', grade: '基本文', basicGrade: 1, category: '1年の基本文', description: '中学1年の基本文を練習します。', displayLabel: '1年' },
+            { id: 'basic_g2', grade: '基本文', basicGrade: 2, category: '2年の基本文', description: '中学2年の基本文を練習します。', displayLabel: '2年' },
+            { id: 'basic_g3', grade: '基本文', basicGrade: 3, category: '3年の基本文', description: '中学3年の基本文を練習します。', displayLabel: '3年' },
+            { id: 'basic_all', grade: '基本文', basicGrade: 'all', category: '全学年の基本文', description: '1年・2年・3年の基本文をまとめて練習します。', displayLabel: '全学年' },
+        ];
 
         const NICKNAME_RULES = {
             minLength: 2,
@@ -218,7 +226,7 @@
          * ------------------------------------------------------------------
          */
         const state = {
-            view: 'start', // start, menu, grade_select, course_select, countdown, history, leaderboard, leaderboard_admin, game, result, mistake_review
+            view: 'start', // start, menu, grade_select, course_select, basic_sentence_select, countdown, history, leaderboard, leaderboard_admin, game, result, mistake_review
             selectedGrade: '中学2年',
             mode: 'normal', // normal, review2
             reviewContext: null,
@@ -256,6 +264,9 @@
                 selectedIndices: [],
                 isCorrect: null, // null, true, false
                 wrongAnswers: [],
+                correctCount: 0,
+                attemptCount: 0,
+                contextLabel: '',
                 startTime: 0,
                 timerInterval: null
             }
@@ -376,11 +387,14 @@
         }
 
         function getRankableCoursesByGrade(grade) {
+            if (grade === '基本文') return BASIC_SENTENCE_COURSES;
             return ENGLISH_KNOCK_CONTENT.filter(course => course.grade === grade);
         }
 
         function getCourseMeta(courseId) {
-            return ENGLISH_KNOCK_CONTENT.find(course => course.id === courseId) || null;
+            return ENGLISH_KNOCK_CONTENT.find(course => course.id === courseId)
+                || BASIC_SENTENCE_COURSES.find(course => course.id === courseId)
+                || null;
         }
 
         function getCourseLabel(courseId) {
@@ -389,6 +403,33 @@
             if (courseId === 'review3') return '総復習（中3）';
             const course = getCourseMeta(courseId);
             return course ? course.category : 'トレーニング';
+        }
+
+        function tokenizeEnglishSentence(sentence) {
+            return String(sentence || '').match(/[A-Za-z]+(?:['’][A-Za-z]+)?|[0-9]+|[.,!?]/g) || [];
+        }
+
+        function getBasicSentenceQuestions(courseId) {
+            const meta = getCourseMeta(courseId);
+            if (!meta || !String(courseId).startsWith('basic_')) return [];
+            const source = meta.basicGrade === 'all'
+                ? BASIC_SENTENCES
+                : BASIC_SENTENCES.filter(item => item.grade === meta.basicGrade);
+            return source.map(item => ({
+                text: item.english,
+                jp: item.japanese,
+                context: item.context || '',
+                chunks: tokenizeEnglishSentence(item.english),
+                courseId
+            })).filter(q => q.text && q.jp && q.chunks.length > 0);
+        }
+
+        function shuffleQuestionsWithoutRepeat(questions) {
+            const shuffled = [...questions].sort(() => Math.random() - 0.5);
+            if (shuffled.length > 1 && shuffled[0] === shuffled[shuffled.length - 1]) {
+                shuffled.push(shuffled.shift());
+            }
+            return shuffled;
         }
 
         function formatSyncTime(value) {
@@ -483,7 +524,7 @@
             const courseBestScores = Object.entries(state.userData.bestScores || {})
                 .map(([courseId, bestScore]) => {
                     const course = getCourseMeta(courseId);
-                    if (!course || !['中学1年', '中学2年', '中学3年'].includes(course.grade)) return null;
+                    if (!course || !['中学1年', '中学2年', '中学3年', '基本文'].includes(course.grade)) return null;
                     return {
                         courseId,
                         grade: course.grade,
@@ -641,6 +682,7 @@
                 case 'review_grade_select': renderReviewGradeSelect(); break;
                 case 'grade_select': renderGradeSelect(); break;
                 case 'course_select': renderCourseSelect(); break;
+                case 'basic_sentence_select': renderBasicSentenceSelect(); break;
                 case 'countdown': renderCountdown(); break;
                 case 'history': renderHistory(); break;
                 case 'leaderboard': renderLeaderboard(); break;
@@ -752,6 +794,18 @@
                                 </div>
                             </div>
                             <i data-lucide="repeat" class="absolute -bottom-4 -right-4 w-24 h-24 text-emerald-100 opacity-70 transform rotate-12 group-hover:scale-110 transition-transform duration-500"></i>
+                        </button>
+
+                        <button onclick="goBasicSentenceSelect()" class="w-full bg-white text-slate-700 p-6 rounded-3xl shadow-md border-2 border-sky-100 hover:border-sky-300 transition-all group relative overflow-hidden text-left h-32 flex flex-col justify-between">
+                            <div class="relative z-10">
+                                <div class="text-sky-500 font-bold text-sm mb-1">BASIC SENTENCES</div>
+                                <div class="text-2xl font-extrabold flex items-center gap-2">
+                                    基本文
+                                    <i data-lucide="chevron-right" class="w-5 h-5 group-hover:translate-x-1 transition-transform"></i>
+                                </div>
+                            </div>
+                            <div class="relative z-10 opacity-80 text-sm">中学英語の基本文を学年別に練習します。</div>
+                            <i data-lucide="book-open-check" class="absolute -bottom-4 -right-4 w-24 h-24 text-sky-100 opacity-70 transform rotate-12 group-hover:scale-110 transition-transform duration-500"></i>
                         </button>
 
                         <button onclick="state.view = 'history'; render();" class="w-full bg-white text-slate-700 p-6 rounded-3xl shadow-md border-2 border-indigo-100 hover:border-indigo-300 transition-all group relative overflow-hidden text-left h-32 flex flex-col justify-between">
@@ -874,6 +928,48 @@
             `;
         }
 
+        function renderBasicSentenceSelect() {
+            const coursesHtml = BASIC_SENTENCE_COURSES.map(course => {
+                const best = state.userData.bestScores[course.id] || 0;
+                return `
+                <button onclick="prepareGame('${course.id}')" class="w-full bg-white border-2 border-slate-100 hover:border-sky-400 hover:shadow-md transition-all p-5 rounded-2xl flex items-center justify-between group text-left relative overflow-hidden">
+                    <div class="relative z-10">
+                        <div class="font-bold text-slate-800 text-lg">${course.category}</div>
+                        <div class="text-xs text-slate-400 mt-1">${course.description}</div>
+                    </div>
+                    <div class="flex flex-col items-end gap-1 relative z-10">
+                        ${best > 0 ? `
+                        <div class="text-xs font-bold text-orange-500 flex items-center gap-1 bg-orange-50 px-2 py-0.5 rounded-full">
+                            <i data-lucide="trophy" class="w-3 h-3"></i>
+                            ${best}
+                        </div>` : ''}
+                        <div class="w-8 h-8 rounded-full bg-sky-50 text-sky-500 flex items-center justify-center group-hover:bg-sky-500 group-hover:text-white transition-colors">
+                            <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+                        </div>
+                    </div>
+                    <div class="absolute -bottom-4 -right-4 w-16 h-16 bg-sky-50 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
+                </button>`;
+            }).join('');
+
+            app.innerHTML = `
+                <div class="app-root bg-sky-50">
+                    <header class="header bg-sky-600 p-6 pt-8 pb-10 rounded-b-[2rem] shadow-lg mb-6 relative">
+                        <button onclick="goMenu()" class="absolute top-6 left-4 text-sky-100 hover:text-white bg-sky-700/50 p-2 rounded-full">
+                            <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                        </button>
+                        <div class="text-center">
+                            <div class="text-sky-200 text-xs font-bold uppercase tracking-wider mb-1">BASIC SENTENCES</div>
+                            <h2 class="text-2xl font-bold text-white">基本文</h2>
+                            <p class="text-sky-100 text-sm mt-1">学年を選んでください</p>
+                        </div>
+                    </header>
+                    <main class="content px-6 space-y-3 pb-8">
+                        ${coursesHtml}
+                    </main>
+                </div>
+            `;
+        }
+
         function renderCountdown() {
             app.innerHTML = `
                 <div class="flex-1 flex flex-col items-center justify-center bg-indigo-600 text-white">
@@ -888,7 +984,7 @@
             const totalHighScore = Object.values(state.userData.bestScores).reduce((a, b) => a + b, 0);
             const playCount = state.userData.history.length;
 
-            const gradeTabs = ['中学1年', '中学2年', '中学3年', '総復習'];
+            const gradeTabs = ['中学1年', '中学2年', '中学3年', '総復習', '基本文'];
             if (!gradeTabs.includes(state.selectedGrade)) {
                 state.selectedGrade = '中学2年';
             }
@@ -924,7 +1020,7 @@
                 `;
             }).join('');
 
-            const scoreListHtml = (state.selectedGrade === '総復習'
+            const scoreListHtml = state.selectedGrade === '総復習'
                 ? [
                     ...['中学1年', '中学2年', '中学3年'].map(grade => {
                     const reviewScore = getReviewHighScoreByGrade(grade);
@@ -958,7 +1054,22 @@
                     </div>`;
                     })()
                 ].join('')
-                : ENGLISH_KNOCK_CONTENT.filter(course => course.grade === state.selectedGrade).map(course => {
+                : state.selectedGrade === '基本文'
+                    ? BASIC_SENTENCE_COURSES.map(course => {
+                    const score = state.userData.bestScores[course.id] || 0;
+                    const scoreLabel = score === 0 ? '未プレイ' : `${score.toLocaleString()} pt`;
+                    return `
+                    <div class="bg-white p-3 rounded-xl border border-slate-100 flex justify-between items-center">
+                        <div>
+                            <div class="text-xs text-sky-500 font-bold">基本文</div>
+                            <div class="font-bold text-slate-700 text-sm">${course.category}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-bold ${scoreLabel === '未プレイ' ? 'text-slate-300 text-xs font-medium' : 'text-indigo-600'}">${scoreLabel}</div>
+                        </div>
+                    </div>`;
+                    }).join('')
+                    : ENGLISH_KNOCK_CONTENT.filter(course => course.grade === state.selectedGrade).map(course => {
                     const normalScore = state.userData.bestScores[course.id] || 0;
                     const reviewScore = getReviewHighScoreByCourse(course.id);
                     const displayScore = Math.max(normalScore, reviewScore);
@@ -977,8 +1088,7 @@
                             <div class="font-bold ${scoreLabel === '未プレイ' ? 'text-slate-300 text-xs font-medium' : 'text-indigo-600'}">${scoreLabel}</div>
                         </div>
                     </div>`;
-                }).join('')
-            );
+                }).join('');
 
             if (!document.querySelector('.report-root')) {
                 initReportLayout();
@@ -1328,6 +1438,8 @@
         function renderGame() {
             const { timeLeft, score, combo, selectedIndices, shuffledChunks, isCorrect } = state.game;
             const jpText = state.game.currentQ?.jp || '';
+            const contextText = state.game.currentQ?.context || '';
+            const contextLabel = state.game.contextLabel || getCourseLabel(state.game.activeCourseId);
 
             let answerBoxClass = 'border-indigo-100';
             if (isCorrect === true) answerBoxClass = 'border-green-400 bg-green-50';
@@ -1383,8 +1495,16 @@
 
                 <!-- Main Game Area -->
                 <div class="flex-1 flex flex-col bg-slate-50">
-                    <!-- Japanese Translation -->
                     <div class="px-4 pt-4">
+                        <div class="text-center text-xs font-black text-slate-400 tracking-wide">${contextLabel}</div>
+                    </div>
+                    <!-- Japanese Translation -->
+                    <div class="px-4 pt-2">
+                        ${contextText ? `
+                        <div class="bg-white border border-sky-100 text-sky-700 rounded-2xl px-4 py-3 mb-2 text-sm font-bold">
+                            <div class="text-[11px] text-sky-400 mb-1">前の文</div>
+                            <div>${contextText}</div>
+                        </div>` : ''}
                         <div class="bg-indigo-50 border border-indigo-100 text-indigo-700 rounded-2xl px-4 py-3 text-center font-bold">
                             ${jpText}
                         </div>
@@ -1435,8 +1555,9 @@
         }
 
         function renderResult() {
-            const { score, maxCombo } = state.game;
+            const { score, maxCombo, correctCount, attemptCount } = state.game;
             const rank = getCurrentRank(); 
+            const accuracy = attemptCount > 0 ? Math.round((correctCount / attemptCount) * 100) : 0;
 
             app.innerHTML = `
                 <div class="flex-1 flex flex-col items-center justify-center p-6 bg-indigo-600 text-white text-center relative overflow-hidden h-full">
@@ -1450,10 +1571,14 @@
                         <h2 class="text-6xl font-black mb-1 drop-shadow-md">${score}</h2>
                         <div class="text-xl font-bold mb-8 opacity-90">POINTS</div>
 
-                        <div class="flex gap-4 mb-10 justify-center">
+                        <div class="flex gap-4 mb-10 justify-center flex-wrap">
                             <div class="bg-white/10 backdrop-blur px-4 py-3 rounded-2xl min-w-[100px]">
                                 <div class="text-xs text-indigo-200 mb-1">MAX COMBO</div>
                                 <div class="text-2xl font-bold text-yellow-300">${maxCombo}</div>
+                            </div>
+                            <div class="bg-white/10 backdrop-blur px-4 py-3 rounded-2xl min-w-[100px]">
+                                <div class="text-xs text-indigo-200 mb-1">正答率</div>
+                                <div class="text-2xl font-bold text-yellow-300">${accuracy}%</div>
                             </div>
                             <div class="bg-white/10 backdrop-blur px-4 py-3 rounded-2xl min-w-[100px]">
                                 <div class="text-xs text-indigo-200 mb-1">TOTAL RANK</div>
@@ -1640,6 +1765,11 @@
             render();
         }
 
+        function goBasicSentenceSelect() {
+            state.view = 'basic_sentence_select';
+            render();
+        }
+
         function startReview2() {
             state.selectedGrade = '中学2年';
             state.mode = 'review2';
@@ -1737,6 +1867,15 @@
                 courseScores = {};
                 state.mode = courseId;
                 state.reviewContext = { enabled: true, grade: selectedReviewGrade };
+            } else if (String(courseId).startsWith('basic_')) {
+                const course = getCourseMeta(courseId);
+                questions = getBasicSentenceQuestions(courseId);
+                state.mode = 'basic';
+                state.reviewContext = {
+                    enabled: false,
+                    grade: course?.displayLabel || '基本文',
+                    category: '基本文'
+                };
             } else {
                 const course = ENGLISH_KNOCK_CONTENT.find(c => c.id === courseId);
                 if (!course) return;
@@ -1748,19 +1887,23 @@
 
             // Initialize State
             const gameDuration = (state.mode === 'review1' || state.mode === 'review2' || state.mode === 'review3') ? 90 : 60;
+            const courseMeta = getCourseMeta(courseId);
             state.game = {
                 activeCourseId: courseId,
                 timeLeft: gameDuration,
                 score: 0,
                 combo: 0,
                 maxCombo: 0,
-                questionQueue: [...questions].sort(() => Math.random() - 0.5),
+                questionQueue: shuffleQuestionsWithoutRepeat(questions),
                 courseScores,
                 currentQ: null,
                 shuffledChunks: [],
                 selectedIndices: [],
                 isCorrect: null,
                 wrongAnswers: [],
+                correctCount: 0,
+                attemptCount: 0,
+                contextLabel: courseMeta?.category || '',
                 startTime: 0, // Set when actual game starts
                 timerInterval: null
             };
@@ -1858,9 +2001,11 @@
             const userSentence = state.game.selectedIndices.map(i => state.game.shuffledChunks[i].text).join('');
             const correctSentence = state.game.currentQ.chunks.join('');
             const elapsed = (Date.now() - state.game.startTime) / 1000;
+            state.game.attemptCount++;
 
             if (userSentence === correctSentence) {
                 state.game.isCorrect = true;
+                state.game.correctCount++;
                 speakText(state.game.currentQ.text);
 
                 const timeBonus = Math.max(10, Math.floor(150 - (elapsed * 5)));
@@ -1890,14 +2035,15 @@
                 const current = state.game.currentQ;
                 if (current) {
                     const exists = state.game.wrongAnswers.some(
-                        w => w.courseId === current.courseId && w.text === current.text
+                        w => w.courseId === current.courseId && w.text === current.text && (w.context || '') === (current.context || '')
                     );
                     if (!exists) {
                         state.game.wrongAnswers.push({
                             courseId: current.courseId,
-                            category: ENGLISH_KNOCK_CONTENT.find(c => c.id === current.courseId)?.category || '',
+                            category: getCourseMeta(current.courseId)?.category || '',
                             text: current.text,
-                            jp: current.jp
+                            jp: current.jp,
+                            context: current.context || ''
                         });
                     }
                 }
@@ -1938,15 +2084,20 @@
                 date: new Date().toISOString(),
                 courseId: state.game.activeCourseId,
                 score: state.game.score,
-                maxCombo: state.game.maxCombo
+                maxCombo: state.game.maxCombo,
+                correctCount: state.game.correctCount,
+                attemptCount: state.game.attemptCount
             });
             if (state.userData.history.length > 50) state.userData.history.pop();
 
             state.userData.scoreLogs.push({
                 courseId: state.game.activeCourseId,
                 score: state.game.score,
-                mode: state.reviewContext ? 'review' : 'normal',
+                mode: state.mode === 'basic' ? 'basic' : (state.reviewContext?.enabled ? 'review' : 'normal'),
                 grade: state.reviewContext?.grade ?? null,
+                category: state.reviewContext?.category ?? null,
+                correctCount: state.game.correctCount,
+                attemptCount: state.game.attemptCount,
                 timestamp: Date.now()
             });
             if (state.userData.scoreLogs.length > 200) state.userData.scoreLogs.shift();
@@ -1959,13 +2110,19 @@
         }
 
         function renderMistakeReview() {
-            const { score, maxCombo, wrongAnswers } = state.game;
+            const { score, maxCombo, wrongAnswers, correctCount, attemptCount } = state.game;
             const mistakes = wrongAnswers || [];
+            const accuracy = attemptCount > 0 ? Math.round((correctCount / attemptCount) * 100) : 0;
             const itemsHtml = mistakes.length === 0
                 ? `<div class="bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl p-4 font-bold text-sm">全問正解でした。復習問題はありません。</div>`
                 : mistakes.map((m, i) => `
                     <div class="bg-white border border-slate-200 rounded-xl p-4 text-left">
                         <div class="text-xs text-indigo-500 font-bold mb-1">#${i + 1} ${m.category || ''}</div>
+                        ${m.context ? `
+                        <div class="bg-sky-50 border border-sky-100 text-sky-700 rounded-lg p-2 text-xs font-bold mb-2">
+                            <div class="text-[10px] text-sky-400 mb-0.5">前の文</div>
+                            ${m.context}
+                        </div>` : ''}
                         <div class="text-slate-800 font-bold text-sm leading-relaxed">${m.text}</div>
                         <div class="text-slate-500 text-sm mt-1">${m.jp}</div>
                     </div>
@@ -1976,9 +2133,10 @@
                     <header class="header bg-indigo-600 p-6 pt-8 pb-8 rounded-b-[2rem] shadow-lg mb-4 text-white text-center">
                         <div class="text-indigo-200 font-bold text-xs uppercase tracking-widest mb-1">Session Complete</div>
                         <h2 class="text-2xl font-extrabold">復習ページ</h2>
-                        <div class="mt-3 flex justify-center gap-3">
+                        <div class="mt-3 flex justify-center gap-3 flex-wrap">
                             <div class="bg-white/10 backdrop-blur px-3 py-2 rounded-xl text-sm font-bold">Score: ${score}</div>
                             <div class="bg-white/10 backdrop-blur px-3 py-2 rounded-xl text-sm font-bold">Max Combo: ${maxCombo}</div>
+                            <div class="bg-white/10 backdrop-blur px-3 py-2 rounded-xl text-sm font-bold">正答率: ${accuracy}%</div>
                         </div>
                     </header>
 
