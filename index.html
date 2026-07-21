@@ -1127,6 +1127,24 @@
             const totalScore = state.userData.totalScore;
             const totalHighScore = Object.values(state.userData.bestScores).reduce((a, b) => a + b, 0);
             const playCount = state.userData.history.length;
+            const earnedRankCount = RANKS.filter(rank => totalScore >= rank.min).length;
+            const rankCollectionHtml = RANKS.map((rank, index) => {
+                const isEarned = totalScore >= rank.min;
+                return `
+                    <div class="rounded-2xl border p-3 flex items-center gap-3 ${isEarned ? 'bg-white border-indigo-100' : 'bg-slate-100 border-slate-200'}">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-xl ${isEarned ? 'bg-indigo-50' : 'bg-slate-200 text-slate-400'}">
+                            ${isEarned ? rank.icon : '？'}
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="text-[11px] font-bold ${isEarned ? 'text-indigo-500' : 'text-slate-400'}">称号 ${index + 1}</div>
+                            <div class="font-black text-sm truncate ${isEarned ? 'text-slate-700' : 'text-slate-400'}">${isEarned ? rank.title : '？？？'}</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <div class="text-[10px] text-slate-400">必要スコア</div>
+                            <div class="text-xs font-black ${isEarned ? 'text-indigo-600' : 'text-slate-400'}">${isEarned ? rank.min.toLocaleString() : '？？？'}</div>
+                        </div>
+                    </div>`;
+            }).join('');
 
             app.innerHTML = `
                 <div class="report-root app-root bg-slate-50">
@@ -1150,6 +1168,21 @@
                             <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
                                 <div class="text-xs text-slate-400 mb-1">総プレイ回数</div>
                                 <div class="text-xl font-bold text-slate-700">${playCount}回</div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="rank-collection header px-6 pb-4">
+                        <div class="bg-white rounded-3xl border border-indigo-100 shadow-sm p-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="font-black text-slate-700 flex items-center gap-2 text-sm">
+                                    <i data-lucide="award" class="w-4 h-4 text-yellow-500"></i>
+                                    GETした称号
+                                </h3>
+                                <div class="text-xs font-black text-indigo-600">${earnedRankCount} / ${RANKS.length}</div>
+                            </div>
+                            <div class="space-y-2 max-h-64 overflow-y-auto pr-1">
+                                ${rankCollectionHtml}
                             </div>
                         </div>
                     </section>
