@@ -409,6 +409,13 @@
             return String(sentence || '').match(/[A-Za-z]+(?:['’][A-Za-z]+)?|[0-9]+|[.,!?]/g) || [];
         }
 
+        function formatChunksAsSentence(chunks) {
+            return chunks
+                .join(' ')
+                .replace(/\s+([.,!?])/g, '$1')
+                .trim();
+        }
+
         function getBasicSentenceQuestions(courseId) {
             const meta = getCourseMeta(courseId);
             if (!meta || !String(courseId).startsWith('basic_')) return [];
@@ -1998,8 +2005,10 @@
         }
 
         function checkAnswer() {
-            const userSentence = state.game.selectedIndices.map(i => state.game.shuffledChunks[i].text).join('');
+            const selectedChunkTexts = state.game.selectedIndices.map(i => state.game.shuffledChunks[i].text);
+            const userSentence = selectedChunkTexts.join('');
             const correctSentence = state.game.currentQ.chunks.join('');
+            const userAnswerText = formatChunksAsSentence(selectedChunkTexts);
             const elapsed = (Date.now() - state.game.startTime) / 1000;
             state.game.attemptCount++;
 
@@ -2043,7 +2052,8 @@
                             category: getCourseMeta(current.courseId)?.category || '',
                             text: current.text,
                             jp: current.jp,
-                            context: current.context || ''
+                            context: current.context || '',
+                            userAnswer: userAnswerText
                         });
                     }
                 }
@@ -2123,7 +2133,14 @@
                             <div class="text-[10px] text-sky-400 mb-0.5">前の文</div>
                             ${m.context}
                         </div>` : ''}
-                        <div class="text-slate-800 font-bold text-sm leading-relaxed">${m.text}</div>
+                        <div class="bg-red-50 border border-red-100 text-red-700 rounded-lg p-2 text-sm font-bold mb-2">
+                            <div class="text-[10px] text-red-400 mb-0.5">あなたの答え</div>
+                            ${m.userAnswer || '記録なし'}
+                        </div>
+                        <div class="bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-lg p-2 text-sm font-bold">
+                            <div class="text-[10px] text-emerald-500 mb-0.5">正しい答え</div>
+                            ${m.text}
+                        </div>
                         <div class="text-slate-500 text-sm mt-1">${m.jp}</div>
                     </div>
                 `).join('');
