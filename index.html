@@ -226,10 +226,11 @@
          * ------------------------------------------------------------------
          */
         const state = {
-            view: 'start', // start, menu, grade_select, course_select, basic_sentence_select, countdown, history, leaderboard, leaderboard_admin, game, result, mistake_review
+            view: 'start', // start, menu, grade_select, course_select, basic_sentence_select, course_links, ready, countdown, history, leaderboard, leaderboard_admin, game, result, mistake_review
             selectedGrade: '中学2年',
             mode: 'normal', // normal, review2
             reviewContext: null,
+            pendingCourseId: null,
             ui: {
                 nicknameError: ''
             },
@@ -403,6 +404,21 @@
             if (courseId === 'review3') return '総復習（中3）';
             const course = getCourseMeta(courseId);
             return course ? course.category : 'トレーニング';
+        }
+
+        function getCourseLink(courseId) {
+            const url = new URL(window.location.href);
+            url.search = '';
+            url.hash = '';
+            url.searchParams.set('course', courseId);
+            return url.toString();
+        }
+
+        function getAllLinkableCourses() {
+            return [
+                ...ENGLISH_KNOCK_CONTENT,
+                ...BASIC_SENTENCE_COURSES
+            ];
         }
 
         function tokenizeEnglishSentence(sentence) {
@@ -690,6 +706,8 @@
                 case 'grade_select': renderGradeSelect(); break;
                 case 'course_select': renderCourseSelect(); break;
                 case 'basic_sentence_select': renderBasicSentenceSelect(); break;
+                case 'course_links': renderCourseLinks(); break;
+                case 'ready': renderReady(); break;
                 case 'countdown': renderCountdown(); break;
                 case 'history': renderHistory(); break;
                 case 'leaderboard': renderLeaderboard(); break;
@@ -815,6 +833,17 @@
                             <i data-lucide="book-open-check" class="absolute -bottom-4 -right-4 w-24 h-24 text-sky-100 opacity-70 transform rotate-12 group-hover:scale-110 transition-transform duration-500"></i>
                         </button>
 
+                        <button onclick="openCourseLinks()" class="w-full bg-white text-slate-700 p-6 rounded-3xl shadow-md border-2 border-teal-100 hover:border-teal-300 transition-all group relative overflow-hidden text-left h-32 flex flex-col justify-between">
+                            <div class="relative z-10">
+                                <div class="text-teal-500 font-bold text-sm mb-1">DIRECT LINKS</div>
+                                <div class="text-2xl font-extrabold flex items-center gap-2">
+                                    項目リンク一覧
+                                    <i data-lucide="chevron-right" class="w-5 h-5 group-hover:translate-x-1 transition-transform"></i>
+                                </div>
+                            </div>
+                            <i data-lucide="link" class="absolute -bottom-4 -right-4 w-24 h-24 text-teal-100 opacity-70 transform rotate-12 group-hover:scale-110 transition-transform duration-500"></i>
+                        </button>
+
                         <button onclick="state.view = 'history'; render();" class="w-full bg-white text-slate-700 p-6 rounded-3xl shadow-md border-2 border-indigo-100 hover:border-indigo-300 transition-all group relative overflow-hidden text-left h-32 flex flex-col justify-between">
                             <div class="relative z-10">
                                 <div class="text-slate-400 font-bold text-sm mb-1">YOUR RECORDS</div>
@@ -841,6 +870,57 @@
                     <div class="mt-8 text-center">
                         <button onclick="state.view = 'start'; render();" class="text-slate-400 text-sm hover:text-indigo-500 underline">ニックネームを変更</button>
                     </div>
+                </div>
+            `;
+        }
+
+        function renderCourseLinks() {
+            const groupedCourses = ['中学1年', '中学2年', '中学3年', '基本文'].map(grade => ({
+                grade,
+                courses: getAllLinkableCourses().filter(course => course.grade === grade)
+            })).filter(group => group.courses.length > 0);
+            const groupsHtml = groupedCourses.map(group => `
+                <section class="space-y-3">
+                    <h3 class="text-sm font-black text-teal-700 flex items-center gap-2">
+                        <i data-lucide="book-open" class="w-4 h-4"></i>
+                        ${group.grade}
+                    </h3>
+                    <div class="space-y-2">
+                        ${group.courses.map(course => {
+                            const link = getCourseLink(course.id);
+                            return `
+                            <div class="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="min-w-0">
+                                        <div class="font-black text-slate-800">${course.category}</div>
+                                        <div class="text-xs text-slate-400 mt-1">${course.description}</div>
+                                        <a href="${link}" class="block text-xs text-teal-600 font-bold mt-2 break-all hover:underline">${link}</a>
+                                    </div>
+                                    <button onclick="copyCourseLink('${course.id}')" class="shrink-0 w-10 h-10 rounded-full bg-teal-50 text-teal-600 hover:bg-teal-600 hover:text-white transition-colors flex items-center justify-center" aria-label="リンクをコピー">
+                                        <i data-lucide="copy" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </section>
+            `).join('');
+
+            app.innerHTML = `
+                <div class="app-root bg-teal-50">
+                    <header class="header bg-teal-600 p-6 pt-8 pb-10 rounded-b-[2rem] shadow-lg mb-6 relative">
+                        <button onclick="goMenu()" class="absolute top-6 left-4 text-teal-100 hover:text-white bg-teal-700/50 p-2 rounded-full">
+                            <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                        </button>
+                        <div class="text-center">
+                            <div class="text-teal-200 text-xs font-bold uppercase tracking-wider mb-1">DIRECT LINKS</div>
+                            <h2 class="text-2xl font-bold text-white">項目リンク一覧</h2>
+                            <p class="text-teal-100 text-sm mt-1">URLを開くとその項目から開始できます</p>
+                        </div>
+                    </header>
+                    <main class="content px-6 pb-8 space-y-6">
+                        ${groupsHtml}
+                    </main>
                 </div>
             `;
         }
@@ -973,6 +1053,46 @@
                     <main class="content px-6 space-y-3 pb-8">
                         ${coursesHtml}
                     </main>
+                </div>
+            `;
+        }
+
+        function renderReady() {
+            const course = getCourseMeta(state.pendingCourseId);
+            const title = state.pendingCourseId === 'review1'
+                ? '総復習（中学1年）'
+                : state.pendingCourseId === 'review2'
+                    ? '総復習（中学2年）'
+                    : state.pendingCourseId === 'review3'
+                        ? '総復習（中学3年）'
+                        : course?.category || 'トレーニング';
+            const subtitle = state.pendingCourseId === 'review1' || state.pendingCourseId === 'review2' || state.pendingCourseId === 'review3'
+                ? '制限時間 90 秒'
+                : '制限時間 60 秒';
+
+            app.innerHTML = `
+                <div class="flex-1 flex flex-col items-center justify-center p-8 bg-indigo-600 text-white relative h-full text-center">
+                    <button onclick="goBackFromReady()" class="absolute top-6 left-4 text-indigo-100 hover:text-white bg-indigo-700/50 p-2 rounded-full">
+                        <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                    </button>
+                    <div class="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none overflow-hidden">
+                        <i data-lucide="timer" class="absolute top-10 right-8 w-36 h-36 transform rotate-12"></i>
+                        <i data-lucide="zap" class="absolute bottom-10 left-8 w-32 h-32 transform -rotate-12"></i>
+                    </div>
+
+                    <div class="z-10 w-full max-w-xs animate-scaleIn">
+                        <div class="text-indigo-200 text-xs font-black tracking-wider mb-2">READY CHECK</div>
+                        <h2 class="text-4xl font-black mb-4">Are you ready?</h2>
+                        <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-5 mb-8">
+                            <div class="text-sm text-indigo-100 mb-1">選択中の項目</div>
+                            <div class="text-xl font-black">${title}</div>
+                            <div class="text-sm text-yellow-200 font-bold mt-3">${subtitle}</div>
+                        </div>
+                        <button onclick="startPreparedGame()" class="w-full bg-yellow-400 text-yellow-900 font-black py-4 rounded-xl shadow-lg hover:bg-yellow-300 transform transition-all active:scale-95 flex items-center justify-center gap-2">
+                            Yes
+                            <i data-lucide="play" class="w-5 h-5 fill-current"></i>
+                        </button>
+                    </div>
                 </div>
             `;
         }
@@ -1790,7 +1910,48 @@
         }
 
         function goMenu() {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('course');
+            window.history.replaceState({}, '', url);
             state.view = 'menu';
+            render();
+        }
+
+        function openCourseLinks() {
+            state.view = 'course_links';
+            render();
+        }
+
+        async function copyCourseLink(courseId) {
+            const link = getCourseLink(courseId);
+            try {
+                await navigator.clipboard.writeText(link);
+                alert('リンクをコピーしました。');
+            } catch (error) {
+                window.prompt('このリンクをコピーしてください', link);
+            }
+        }
+
+        function startPreparedGame() {
+            if (!state.pendingCourseId) return;
+            startGame(state.pendingCourseId);
+        }
+
+        function goBackFromReady() {
+            const pendingCourseId = state.pendingCourseId;
+            const url = new URL(window.location.href);
+            url.searchParams.delete('course');
+            window.history.replaceState({}, '', url);
+            state.pendingCourseId = null;
+            if (pendingCourseId === 'review1' || pendingCourseId === 'review2' || pendingCourseId === 'review3' || pendingCourseId === 'g3_exam_composite') {
+                state.view = 'review_grade_select';
+            } else if (String(pendingCourseId).startsWith('basic_')) {
+                state.view = 'basic_sentence_select';
+            } else {
+                const course = getCourseMeta(pendingCourseId);
+                if (course?.grade) state.selectedGrade = course.grade;
+                state.view = 'course_select';
+            }
             render();
         }
 
@@ -1891,8 +2052,14 @@
             `;
         }
         
-        // Prepare Game: Setup state -> Countdown -> Start
         function prepareGame(courseId) {
+            state.pendingCourseId = courseId;
+            state.view = 'ready';
+            render();
+        }
+
+        // Start Game: Setup state -> Countdown -> Start
+        function startGame(courseId) {
             let questions = null;
             let courseScores = null;
             if (courseId === 'review1' || courseId === 'review2' || courseId === 'review3') {
@@ -1928,6 +2095,7 @@
             // Initialize State
             const gameDuration = (state.mode === 'review1' || state.mode === 'review2' || state.mode === 'review3') ? 90 : 60;
             const courseMeta = getCourseMeta(courseId);
+            state.pendingCourseId = null;
             state.game = {
                 activeCourseId: courseId,
                 timeLeft: gameDuration,
@@ -2216,7 +2384,7 @@
         }
 
         function retryGame() {
-            prepareGame(state.game.activeCourseId); // Use prepareGame for countdown
+            prepareGame(state.game.activeCourseId);
         }
 
         function exitGame() {
@@ -2231,7 +2399,16 @@
         }
 
         // Initialize
-        render();
+        function applyInitialRoute() {
+            const courseId = new URLSearchParams(window.location.search).get('course');
+            if (courseId && getCourseMeta(courseId)) {
+                prepareGame(courseId);
+                return;
+            }
+            render();
+        }
+
+        applyInitialRoute();
 
     </script>
 </body>
